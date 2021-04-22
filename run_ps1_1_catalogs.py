@@ -161,7 +161,7 @@ def write_phosim_inst_file(
     out_dir="./",
     camconfig=3,
     opd=False,
-    exposure=0.25,
+    exposure=15,
     obsid=9006002,
     position="defocal",
 ):
