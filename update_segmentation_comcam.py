@@ -3,35 +3,6 @@ from lsst.obs.lsst import LsstComCam
 import numpy as np 
 
 
-cornerSensors = ['R04_S20_C0',
-               'R04_S20_C1',
-               'R44_S00_C0',
-               'R44_S00_C1',
-               'R00_S22_C0',
-               'R00_S22_C1',
-               'R40_S02_C0',
-               'R40_S02_C1']
-        
-        
-# phosim corner wavefront
-# amplifier names to lsst cam
-ch_map = {'00': '17',
-        '01': '16',
-        '02': '15',
-        '03': '14',
-        '04': '13',
-        '05': '12',
-        '06': '11',
-        '07': '10',
-        '10': '17',
-        '11': '16',
-        '12': '15',
-        '13': '14',
-        '14': '13',
-        '15': '12',
-        '16': '11',
-        '17': '10'}
-
 # read all the lines to a list : 
 pathToFile = '/project/scichris/aos/phosim_syseng4/data/comcam/segmentation_old.txt'
 
@@ -46,6 +17,10 @@ camera = LsstComCam().getCamera()
 # Update the data 
 newSensorData  = {}
   
+# running only over CCDs in the mapper,
+# even though originally that comcam segmentation.txt 
+# had data for guide and corner sensors ... (basically it was 
+# the same as for data/lsst/segmentation.txt... )
 
 for sensorName in camera.getNameIter():
     print('Running %s'%sensorName)
@@ -87,18 +62,18 @@ for sensorName in camera.getNameIter():
             
             sensorAmpName = splitContent[0]
             ampName = sensorAmpName.split('_')[2]
-            ampGain = splitContent[7]
-            #ampBias  = splitContent[9]
-            ampReadNoise = splitContent[11]
+            #ampGain = splitContent[7]   <--  in the mapper as amp.getGain()
+            #ampGainVariance = splitContent[8] <-- change from 3% to 0
+            #ampBias  = splitContent[9]   
+            #ampBiasVariance = splitContent[10]
+            #ampReadNoise = splitContent[11]  <-- in the mapper as amp.getReadNoise()
+            #ampReadNoiseVariance = splitContent[12]
             #ampDarkCurrent = splitContent[13]
 
             #print('%s: gain %s, bias %s, noise %s, dc %s'% (sensorAmpName, ampGain, ampBias, ampReadNoise, ampDarkCurrent ))
             #print(content)
             #newContent = splitContent.copy()
             
-            # change the name of corner sensor amplifiers 
-            if sensorName in cornerSensors:
-                ampName = 'C%s'%ch_map[ampName[1:]]
                 
             # for the main raft the amp names are correct 
             newSensorAmpName = '%s_%s'%(newName, ampName)
@@ -123,6 +98,8 @@ for sensorName in camera.getNameIter():
                     newSplitContent[7] = newAmpGain
                     newSplitContent[11] = newAmpReadNoise
                     
+                    # change the gain variance from 3% to 0 
+                    newSplitContent[8] = str(0)  
                     
                     # update xlo, xhi, ylo, yhi ...
                     # amp.getBBox() is the only one that explains the extent of the amplifier 
@@ -238,7 +215,7 @@ for sensorName in newSensorData.keys():
         
 # write the unchanged header, and the new content,
 # into a new segmentation.txt file 
-fname = "/project/scichris/aos/phosim_syseng4/data/comcam/segmentation_DM-28919.txt"
+fname = "/project/scichris/aos/phosim_syseng4/data/comcam/segmentation_DM-29843.txt"
 f = open(fname, "w")
 f.writelines(headerLines)
 f.writelines(newContentLines)
