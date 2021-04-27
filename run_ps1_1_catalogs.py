@@ -3,6 +3,8 @@ import os
 import pandas as pd
 import numpy as np
 import psycopg2
+import argparse
+
 
 def get_field_ra_dec():
     """Read the ra,dec coordinates of simulated fields
@@ -26,36 +28,6 @@ def get_field_ra_dec():
                                   "dec": gt["dec_deg"][i]
                                   }
     return gt_dict
-
-# read in the file containing coordinates
-# for the catalog query
-filename = "ps1_query_coordinates.txt"
-gt = Table.read("ps1_query_coordinates.txt", format="ascii")
-
-
-# rewrite as dict for easier access of coordinates
-# of a specific field by name
-gt_dict = {}
-for i in range(len(gt)):
-    gt_dict[gt["name"][i]] = {"ra": gt["ra_deg"][i], "dec": gt["dec_deg"][i]}
-
-
-#  define which fields and instruments
-all_fields = list(gt_dict.keys())
-fields =  all_fields
-instruments = ['comCam', 'lsstCam']#  ["comCam"]  # or ['comCam', 'lsstCam']
-
-
-#  connect to a database
-dbname = "lsstdevaosdb1"
-host = "lsst-pgsql03.ncsa.illinois.edu"
-dbport = 5432
-
-connection = psycopg2.connect(
-    dbname=dbname,
-    host=host,
-    port=dbport,
-)
 
 
 def get_star_catalog(
@@ -113,32 +85,6 @@ def get_star_catalog(
         print(f"Saved as {file_path}")
 
     return panda_cat
-
-
-# make sure that the root dir exists
-root_dir = "/project/scichris/aos/ps1_phosim/"
-if not os.path.exists(root_dir):
-    os.makedirs(root_dir)
-
-
-# begin loop
-catalogs = {}
-for instrument in instruments:
-    catalogs[instrument] = {}
-
-    for field_name in fields:
-        ra = gt_dict[field_name]["ra"]
-        dec = gt_dict[field_name]["dec"]
-        print('\n Obtaining star catalog for ', field_name)
-
-        # query database for sources within a given radius,
-        # store as ASCII file and return as a pandas dataframe
-        panda_cat = get_star_catalog(
-            connection, ra, dec, field_name, instrument, output_dir=root_dir
-        )
-
-        # add to the dictionary for fast access
-        catalogs[instrument][field_name] = panda_cat
 
 
 # NB:  here we only do 0.25 sec exposure to quickly
@@ -234,7 +180,6 @@ def write_phosim_inst_file(
                     )
                 )
     print("Saved as ", out_file)
-    return out_file
 
 
 def write_phosim_cmd_file(root_dir, file_name="phosim.cmd",
@@ -287,39 +232,119 @@ def write_phosim_cmd_file(root_dir, file_name="phosim.cmd",
         output.write("centroidfile 1\n")  # X=1: output centroid files
 
     print(f"Saved as {out_file}")
-    return out_file
 
 
-# write the phosim .cmd file
-# just once, since we use
-# the same physics commands
-# file for all simulations
-cmd_file = write_phosim_cmd_file(root_dir,
-                                 file_name="noBkgnd.cmd", no_background=True)
+def main(
+    instruments=["comCam"],
+    fields=["high"],
+    positions=["focal"],
+    exposure=0.25,
+):
 
+    #  connect to a database
+    dbname = "lsstdevaosdb1"
+    host = "lsst-pgsql03.ncsa.illinois.edu"
+    dbport = 5432
 
-# write the star catalogs as .inst files:
-# {field_name} X {field_size} X {defocal}
-# {med,high,low,Baade} X {comCam, lsstCam} X {focal, defocal}
+    connection = psycopg2.connect(dbname=dbname, host=host, port=dbport)
 
+    # get coordinates of stellar fields
+    gt_dict = get_field_ra_dec()
 
-for instrument in instruments:
-    for field_name in fields:
-        for position in ["focal", "defocal"]:
-            ra = gt_dict[field_name]["ra"]
-            dec = gt_dict[field_name]["dec"]
+    # make sure that the root dir exists
+    root_dir = "/project/scichris/aos/ps1_phosim/"
+    if not os.path.exists(root_dir):
+        os.makedirs(root_dir)
 
-            # access the pandas catalog via dict
-            panda_catalog = catalogs[instrument][field_name]
+    # obtain the star catalogs
+    catalogs = {}
+    for instrument in instruments:
+        catalogs[instrument] = {}
 
-            inst_file = write_phosim_inst_file(
-                panda_catalog,
-                ra,
-                dec,
-                phosim_file=f"stars_{instrument}_PS1_{field_name}_{position}.inst",
-                passband="r",
-                out_dir=root_dir,
-                exposure=0.25,
-                obsid=9006002,
-                position=position,
+        for field in fields:
+            ra = gt_dict[field]["ra"]
+            dec = gt_dict[field]["dec"]
+            print("\n Obtaining star catalog for ", field)
+
+            # query database for sources within a given radius,
+            # store as ASCII file and return as a pandas dataframe
+            panda_cat = get_star_catalog(
+                connection, ra, dec, field, instrument, output_dir=root_dir
             )
+
+            # add to the dictionary for fast access
+            catalogs[instrument][field] = panda_cat
+
+    # write the phosim .cmd file
+    # just once, since we use
+    # the same physics commands
+    # file for all simulations
+    write_phosim_cmd_file(
+        root_dir, file_name="noBkgnd.cmd", no_background=True
+    )
+
+    # write the star catalogs as .inst files:
+    # {field_name} X {field_size} X {defocal}
+    # {med,high,low,Baade} X {comCam, lsstCam} X {focal, defocal}
+    for instrument in instruments:
+        for field in fields:
+            for position in positions:
+                ra = gt_dict[field]["ra"]
+                dec = gt_dict[field]["dec"]
+
+                # access the pandas catalog via dict
+                panda_catalog = catalogs[instrument][field]
+
+                write_phosim_inst_file(
+                    panda_catalog,
+                    ra,
+                    dec,
+                    phosim_file=f"stars_{instrument}\
+_PS1_{field}_{position}.inst",
+                    passband="r",
+                    out_dir=root_dir,
+                    exposure=exposure,
+                    obsid=9006002,
+                    position=position,
+                )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Query PS1 sql database to create phosim input catalogs."
+    )
+    parser.add_argument(
+        "--instruments",
+        nargs="+",
+        default=["comCam"],
+        help='A list of instruments, eg. "lsstCam", "comCam" ',
+    )
+    parser.add_argument(
+        "--fields",
+        nargs="+",
+        default=["high"],
+        help='A list of field names to generate, \
+eg. "high", "med", "low", "Baade"',
+    )
+    parser.add_argument(
+        "--positions",
+        nargs="+",
+        default=["defocal"],
+        help='A list of positions to simulate, eg. "focal", "defocal". ',
+    )
+    parser.add_argument(
+        "--exposure",
+        nargs=1,
+        type=float,
+        default=0.25,
+        help="Exposure time for the instance catalogs, stored as SIM_VISTIME \
+in the .inst file",
+    )
+
+    args = parser.parse_args()
+    main(
+        instruments=args.instruments,
+        fields=args.fields,
+        positions=args.positions,
+        exposure=args.exposure,
+    )
