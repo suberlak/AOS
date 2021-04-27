@@ -4,6 +4,29 @@ import pandas as pd
 import numpy as np
 import psycopg2
 
+def get_field_ra_dec():
+    """Read the ra,dec coordinates of simulated fields
+    for creation of phosim files. Restructure as
+    dictionary for easier access of each value.
+
+    Returns:
+    -------
+    gt_dict: a dictionary where keys are field names, eg.
+            high, med, low, Baade, so that ra,dec can be
+            accessed via eg. gt_dict['high']['ra']
+    """
+    filename = "/project/scichris/aos/ps1_query_coordinates.txt"
+    gt = Table.read(filename, format="ascii")
+
+    # rewrite as dict for easier access of coordinates
+    # of a specific field by name
+    gt_dict = {}
+    for i in range(len(gt)):
+        gt_dict[gt["name"][i]] = {"ra": gt["ra_deg"][i],
+                                  "dec": gt["dec_deg"][i]
+                                  }
+    return gt_dict
+
 # read in the file containing coordinates
 # for the catalog query
 filename = "ps1_query_coordinates.txt"
