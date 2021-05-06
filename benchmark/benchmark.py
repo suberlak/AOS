@@ -4,6 +4,30 @@ import argparse
 import time
 
 
+
+
+def write_readme(work_dir, phosim_command, inst_file,
+                 cmd_file,ttl_time):
+    """
+    Store information about the .inst and .cmd
+    phoSim input files used to run the simulation
+    """
+    filename = "README.txt"
+    outfile = os.path.join(work_dir, filename)
+    with open(outfile, "w") as output:
+
+        output.write("Files in /raw/ were created with this command:\n\n\n")
+        output.write(phosim_command)
+        output.write("\n\n\n")
+        output.write(f"The instance catalog was {inst_file}\n")
+        output.write("\n")
+        output.write(f"The physics command catalog was {cmd_file}\n")
+        output.write("\n\n")
+        output.write("\n\n")
+        output.write(f"Running phosim took {ttl_time} seconds")
+        
+        
+        
 def main(
     dir_name="test",
     phosim_p=24,
@@ -47,6 +71,9 @@ def main(
     ttl_time = time.time() - t0
     print(f"Running phosim took {ttl_time:.3f} seconds")
 
+    write_readme(work_dir, command, inst_file,
+                 cmd_file, ttl_time)
+   
     # repackage the output
     repackaged_dir = os.path.join(work_dir, "repackaged")
     command = f"phosim_repackager.py {out_dir} \
