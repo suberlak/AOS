@@ -1,0 +1,10 @@
+
+Note: 
+
+we add perturbations from iter0  to the end of the original cmd file : 
+
+eg. 
+
+cat noBkgnd.cmd imgCloseLoop_0-00/iter0/pert/pert.cmd >> noBkgndPert00.cmd
+
+cat qckBkgnd.cmd imgCloseLoop_0-05/iter0/pert/pert.cmd >> qckBkgndPert05.cmd 
