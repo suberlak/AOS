@@ -29,18 +29,26 @@ def calculate_obshistid(instrument, field, position, cmd_file, run):
     instDict = {"comCam": 0, "lsstCam": 1}
     fieldDict = {"high": 0, "med": 1, "low": 2, "Baade": 3}
     positionDict = {"focal": 0, "extra": 1, "intra": 2}
+
+    if cmd_file.find("_") > 0:
+        # eg 'noBkgndPert00_NCSA.cmd', 'noBkgndPert00_hyak.cmd'
+        # i.e. with corrected surfacemap paths
+        cmd = cmd_file.split("_")[0]
+    else:  # eg. 'noBkgndPert00.cmd'
+        # i.e. with original paths
+        cmd = cmd_file.split(".")[0]
     cmdDict = {
         "noBkgndPert00": 0,
         "noBkgndPert05": 1,
         "qckBkgndPert00": 2,
         "qckBkgndPert05": 3,
-        "noBkgnd":4,
-        "qckBkgnd":5,
+        "noBkgnd": 4,
+        "qckBkgnd": 5,
     }
     first = instDict[instrument]
     second = fieldDict[field]
     third = positionDict[position]
-    fourth = cmdDict[cmd_file[:-4]]
+    fourth = cmdDict[cmd]
     obshistid = f"90{first}{second}{third}{fourth}{run}"
     return obshistid
 
