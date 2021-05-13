@@ -24,7 +24,7 @@ def write_readme(work_dir, phosim_command, inst_file, cmd_file, repackager_comma
         output.write(repackager_command)
 
 
-def calculate_obshistid(intrument, field, position, cmd_file, run):
+def calculate_obshistid(instrument, field, position, cmd_file, run):
 
     instDict = {"comCam": 0, "lsstCam": 1}
     fieldDict = {"high": 0, "med": 1, "low": 2, "Baade": 3}
@@ -34,6 +34,8 @@ def calculate_obshistid(intrument, field, position, cmd_file, run):
         "noBkgndPert05": 1,
         "qckBkgndPert00": 2,
         "qckBkgndPert05": 3,
+        "noBkgnd":4,
+        "qckBkgnd":5,
     }
     first = instDict[instrument]
     second = fieldDict[field]
@@ -49,7 +51,7 @@ def main(
     positions=["focal"],
     phosim_t=1,
     phosim_p=25,
-    cmd_file="noBkgnd.cmd",
+    cmd_file="noBkgndPert00.cmd",
     phosim_path="/project/scichris/aos/phosim_syseng4/phosim.py",
     root_dir="/project/scichris/aos/ps1_phosim/",
     run=1,
@@ -62,6 +64,7 @@ def main(
                 # define instance catalog and physics command file
                 inst_file = f"stars_{instrument}_PS1_{field}_{position}.inst"
                 inst_file_path = os.path.join(root_dir, inst_file)
+
                 cmd_file_path = os.path.join(root_dir, cmd_file)
 
                 obshistid = calculate_obshistid(
@@ -133,15 +136,14 @@ eg. "high", "med", "low", "Baade"',
     parser.add_argument(
         "--positions",
         nargs="+",
-        default=["defocal"],
-        help='A list of positions to simulate, eg. "focal", "defocal". ',
+        default=["focal"],
+        help='A list of positions to simulate, eg. "focal", "extra", "intra". ',
     )
     parser.add_argument(
         "--phosim_t",
         "-t",
         nargs=1,
-        type=int,
-        default=1,
+        default=[1],
         help="Phosim argument to multi-thread the calculation (M) on \
 a per-astronomical-source basis. \
 Note that there should be M*N cores available.",
@@ -150,11 +152,17 @@ Note that there should be M*N cores available.",
         "--phosim_p",
         "-p",
         nargs=1,
-        type=int,
-        default=25,
+        default=[25],
         help="Phosim argument to run N copies of raytrace. \
 Note that there should be M*N cores available.",
     )
+    parser.add_argument(
+        "--cmd_file",
+        type=str,
+        default="noBkgnd.cmd",
+        help="Name of the physics command file used by phosim",
+    )
+
     parser.add_argument(
         "--phosim_path",
         type=str,
@@ -186,9 +194,10 @@ are the same (default:1).",
         instruments=args.instruments,
         fields=args.fields,
         positions=args.positions,
+        cmd_file=args.cmd_file,
+        phosim_path=args.phosim_path,
         phosim_t=args.phosim_t[0],
         phosim_p=args.phosim_p[0],
-        phosim_path=args.phosim_path,
         root_dir=args.root_dir,
         run=args.run,
     )
