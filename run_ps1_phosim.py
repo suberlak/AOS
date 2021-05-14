@@ -3,7 +3,8 @@ import os
 import argparse
 
 
-def write_readme(work_dir, phosim_command, inst_file, cmd_file, repackager_command):
+def write_readme(work_dir, phosim_command, inst_file, cmd_file, repackager_command,
+                ttl_time):
     """
     Store information about the .inst and .cmd
     phoSim input files used to run the simulation
@@ -22,6 +23,7 @@ def write_readme(work_dir, phosim_command, inst_file, cmd_file, repackager_comma
         s = "Files from /raw/ were repackaged to /repackaged/ with \n"
         output.write(s)
         output.write(repackager_command)
+        output.write(f"Running phosim took {ttl_time} seconds")
 
 
 def calculate_obshistid(instrument, field, position, cmd_file, run):
@@ -101,15 +103,19 @@ def main(
                 phosim_command = command
 
                 print(f"\nRunning via subprocess: \n {command}\n")
+                t0 = time.time()
                 if subprocess.call(command, shell=True) != 0:
                     raise RuntimeError("Error running: %s" % command)
-
+                ttl_time = time.time() - t0
+                print(f"Running phosim took {ttl_time:.3f} seconds")
+                
                 # repackage the output
                 focuszDict = {"focal": 0, "intra": 1500, "extra": -1500}
                 focusz = focuszDict[position]
                 repackaged_dir = os.path.join(work_dir, "repackaged")
                 command = f"phosim_repackager.py {out_dir} \
     --out_dir {repackaged_dir} --inst {instr} --focusz {focusz}"
+                
                 print(f"\nRunning via subprocess: \n {command}\n")
                 repackager_command = command
                 if subprocess.call(command, shell=True) != 0:
@@ -123,6 +129,7 @@ def main(
                     inst_file_path,
                     cmd_file_path,
                     repackager_command,
+                    ttl_time
                 )
 
 
