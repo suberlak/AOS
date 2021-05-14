@@ -1,0 +1,20 @@
+description: ISR basic processing pipeline
+instrument: lsst.obs.lsst.LsstComCam
+tasks:
+  isr:
+    class: lsst.ip.isr.isrTask.IsrTask
+    config:
+      connections.outputExposure: postISRCCD
+      doApplyGains: true
+      doBias: false
+      doBrighterFatter: false
+      doCrosstalk: false
+      doDark: false
+      doDefect: false
+      doFlat: false
+      doFringe: false
+      doInterpolate: false
+      doLinearize: false
+      doNanMasking: false
+      doOverscan: true
+      doVariance: false
