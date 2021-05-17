@@ -115,7 +115,7 @@ def main(
                 # add sensor selection
                 if len(phosim_s[0]) > 0:
                     sensor_names = sensor_list_to_string(phosim_s)
-                    command += f" -s {sensor_names} "
+                    command += f' -s "{sensor_names}"'
 
                 # end of the command
                 command += f"> {log_file} 2>&1"
