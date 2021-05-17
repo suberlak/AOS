@@ -1,10 +1,11 @@
 import subprocess
 import os
 import argparse
+import time
 
-
-def write_readme(work_dir, phosim_command, inst_file, cmd_file, repackager_command,
-                ttl_time):
+def write_readme(
+    work_dir, phosim_command, inst_file, cmd_file, repackager_command, ttl_time
+):
     """
     Store information about the .inst and .cmd
     phoSim input files used to run the simulation
@@ -55,16 +56,25 @@ def calculate_obshistid(instrument, field, position, cmd_file, run):
     return obshistid
 
 
+def sensor_list_to_string(sensorNameList):
+    sensors = ""
+    for sensor in sensorNameList:
+        sensors += "%s|" % sensor
+    return sensors
+
+
 def main(
     instruments=["comCam"],
     fields=["high"],
     positions=["focal"],
     phosim_t=1,
     phosim_p=25,
+    phosim_s=[""],
     cmd_file="noBkgndPert00.cmd",
     phosim_path="/project/scichris/aos/phosim_syseng4/phosim.py",
     root_dir="/project/scichris/aos/ps1_phosim/",
     run=1,
+    dry_run=False,
 ):
 
     for instrument in instruments:
@@ -93,44 +103,56 @@ def main(
                     root_dir, instrument, field, position, str(obshistid)
                 )
                 out_dir = os.path.join(work_dir, "raw")
-                if not os.path.exists(out_dir):
-                    os.makedirs(out_dir)
+                if not dry_run:
+                    if not os.path.exists(out_dir):
+                        os.makedirs(out_dir)
                 log_file = os.path.join(work_dir, "starPhoSim.log")
 
-                # run phosim
+                # run phosim: beginning of the command
                 command = f"python {phosim_path} {inst_file_path} -i {instr} -e 1 \
-    -c {cmd_file_path} -p {phosim_p}  -o {out_dir} > {log_file} 2>&1"
+    -c {cmd_file_path} -p {phosim_p}  -o {out_dir} "
+
+                # add sensor selection
+                if len(phosim_s[0]) > 0:
+                    sensor_names = sensor_list_to_string(phosim_s)
+                    command += f" -s {sensor_names} "
+
+                # end of the command
+                command += f"> {log_file} 2>&1"
                 phosim_command = command
 
                 print(f"\nRunning via subprocess: \n {command}\n")
                 t0 = time.time()
-                if subprocess.call(command, shell=True) != 0:
-                    raise RuntimeError("Error running: %s" % command)
+                if not dry_run:
+                    if subprocess.call(command, shell=True) != 0:
+                        raise RuntimeError("Error running: %s" % command)
                 ttl_time = time.time() - t0
                 print(f"Running phosim took {ttl_time:.3f} seconds")
-                
+
                 # repackage the output
                 focuszDict = {"focal": 0, "intra": 1500, "extra": -1500}
                 focusz = focuszDict[position]
                 repackaged_dir = os.path.join(work_dir, "repackaged")
                 command = f"phosim_repackager.py {out_dir} \
     --out_dir {repackaged_dir} --inst {instr} --focusz {focusz}"
-                
+
                 print(f"\nRunning via subprocess: \n {command}\n")
                 repackager_command = command
-                if subprocess.call(command, shell=True) != 0:
-                    raise RuntimeError("Error running: %s" % command)
+                if not dry_run:
+                    if subprocess.call(command, shell=True) != 0:
+                        raise RuntimeError("Error running: %s" % command)
 
                 # store names of all files used by phosim to README file
                 # for good bookkeeping
-                write_readme(
-                    work_dir,
-                    phosim_command,
-                    inst_file_path,
-                    cmd_file_path,
-                    repackager_command,
-                    ttl_time
-                )
+                if not dry_run:
+                    write_readme(
+                        work_dir,
+                        phosim_command,
+                        inst_file_path,
+                        cmd_file_path,
+                        repackager_command,
+                        ttl_time,
+                    )
 
 
 if __name__ == "__main__":
@@ -172,6 +194,16 @@ Note that there should be M*N cores available.",
 Note that there should be M*N cores available.",
     )
     parser.add_argument(
+        "--phosim_s",
+        "-s",
+        nargs="+",
+        default=[""],
+        help="Phosim argument to specify which sensors to simulate. Eg. R22_S00 R22_S11 \
+(default:"
+        ", i.e. not specify anything)",
+    )
+
+    parser.add_argument(
         "--cmd_file",
         type=str,
         default="noBkgnd.cmd",
@@ -203,6 +235,12 @@ will be written",
         help="Run number, assuming instrument, field, position, cmd_file\
 are the same (default:1).",
     )
+    parser.add_argument(
+        "--dry_run",
+        default=False,
+        action="store_true",
+        help="Do not run any simulation, just print commands used.",
+    )
 
     args = parser.parse_args()
     main(
@@ -213,6 +251,8 @@ are the same (default:1).",
         phosim_path=args.phosim_path,
         phosim_t=args.phosim_t[0],
         phosim_p=args.phosim_p[0],
+        phosim_s=args.phosim_s,
         root_dir=args.root_dir,
         run=args.run,
+        dry_run=args.dry_run,
     )
