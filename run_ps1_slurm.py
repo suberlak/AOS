@@ -36,10 +36,26 @@ def write_slurm_script(python_script = '/project/scichris/aos/AOS/run_ps1_phosim
 
     return out_file
 
-slurm_file = write_slurm_script()
 
 def submit_slurm_job(slurm_file):
     print(f'Running sbatch  {slurm_file}')
     subprocess.call(['sbatch', slurm_file]) 
 
-submit_slurm_job(slurm_file)
+
+counter = 7
+for bkgnd in ['qck','no']:
+    cmd_file = f'{bkgnd}BkgndPert05_NCSA.cmd' 
+    for position in ['focal','extra','intra']:
+        job_name=f"comHi{counter}"
+        slurm_file_name = f"runSlurm{job_name}.sl"
+        
+        slurm_file = write_slurm_script(position=position, 
+                                        cmd_file=cmd_file, 
+                                        job_name=job_name,
+                                        slurm_file_name=slurm_file_name
+                                       )
+        
+        submit_slurm_job(slurm_file)
+        
+        
+        

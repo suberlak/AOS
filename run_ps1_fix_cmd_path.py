@@ -61,7 +61,7 @@ def update_cmd_file_paths(
             splitline = line.split()
             mirror_file = splitline[2].split("/")[-1]
             path_to_mirror = os.path.join(root_dir, surfacemap_dir, mirror_file)
-            print(path_to_mirror)
+            #print(path_to_mirror)
             if not os.path.exists(path_to_mirror):
                 raise RuntimeError(f"Error: this file {path_to_mirror} does not exist! ")
      
