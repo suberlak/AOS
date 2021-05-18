@@ -110,7 +110,7 @@ def main(
 
                 # run phosim: beginning of the command
                 command = f"python {phosim_path} {inst_file_path} -i {instr} -e 1 \
-    -c {cmd_file_path} -p {phosim_p}  -o {out_dir} "
+    -c {cmd_file_path} -w {out_dir} -p {phosim_p}  -o {out_dir} "
 
                 # add sensor selection
                 if len(phosim_s[0]) > 0:
