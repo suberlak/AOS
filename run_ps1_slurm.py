@@ -10,19 +10,19 @@ def write_to_file(out_file, content):
 
 
 def write_slurm_script(
-    python_script="/project/scichris/aos/AOS/run_ps1_phosim.py",
-    instrument="comCam",
-    field="high",
-    position="extra",
-    phosim_p=24,
-    cmd_file="noBkgndPert05_NCSA.cmd",
-    root_dir="/project/scichris/aos/AOS/DM-28360/",
-    nodes=1,
-    ntasks=24,
-    job_name="comHi12",
-    slurm_file_name="runSlurmTest.sl",
-    slurm_path="/project/scichris/aos/AOS/",
-    time_limit=300,
+    python_script,
+    instrument,
+    field,
+    position,
+    phosim_p,
+    cmd_file,
+    root_dir,
+    nodes,
+    ntasks,
+    job_name,
+    slurm_file_name,
+    slurm_path,
+    time_limit,
 ):
 
     cmd = f"python {python_script} --instruments {instrument} --fields {field} \
@@ -51,23 +51,22 @@ def submit_slurm_job(slurm_file):
 
 
 def main(
-    instruments=["comCam"],
-    fields=["high"],
-    positions=["focal"],
-    phosim_p=25,
-    backgrounds=["qck", "no"],
-    perts=["00", "05"],
-    suffix="NCSA",
-    python_script="/project/scichris/aos/AOS/run_ps1_phosim.py",
-    root_dir="/project/scichris/aos/AOS/DM-28360/",
-    nodes=1,
-    ntasks=24,
-    run=1,
-    dry_run=False,
-    job_prefix="comHi",
-    slurm_file="runSlurm",
-    slurm_path="/project/scichris/aos/AOS/",
-    time_limit=300,
+    instruments,
+    fields,
+    positions,
+    phosim_p,
+    backgrounds,
+    perts,
+    suffix,
+    python_script,
+    root_dir,
+    nodes,
+    ntasks,
+    dry_run,
+    job_prefix,
+    slurm_file,
+    slurm_path,
+    time_limit,
 ):
 
     counter = 0
@@ -97,6 +96,7 @@ def main(
                             job_name=job_name,
                             slurm_file_name=slurm_file_name,
                             slurm_path=slurm_path,
+                            time_limit=time_limit,
                         )
                         if not dry_run:
                             submit_slurm_job(slurm_file_path)
@@ -192,7 +192,7 @@ will be written",
         "--ntasks",
         nargs=1,
         type=int,
-        default=1,
+        default=24,
         help="Number of tasks per node, usually one task per CPU, \
 parsed as #SBATCH --ntasks {ntasks}, so \
 eg. ntasks=24 with 24 CPU node (default:24).",
@@ -252,4 +252,5 @@ write the slurm jobs and print the arguments parsed (default: False)",
         slurm_file=args.slurm_file,
         slurm_path=args.slurm_path,
         dry_run=args.dry_run,
+        time_limit=args.time_limit,
     )
