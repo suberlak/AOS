@@ -70,6 +70,7 @@ def main(
 ):
 
     counter = 0
+    if ntasks
     for instrument in instruments:
         for field in fields:
             for bkgnd in backgrounds:
@@ -184,15 +185,13 @@ will be written",
     parser.add_argument(
         "--nodes",
         nargs=1,
-        type=int,
-        default=1,
+        default=[1],
         help="Number of nodes, parsed as #SBATCH --nodes {nodes} (default:1).",
     )
     parser.add_argument(
         "--ntasks",
         nargs=1,
-        type=int,
-        default=24,
+        default=[24],
         help="Number of tasks per node, usually one task per CPU, \
 parsed as #SBATCH --ntasks {ntasks}, so \
 eg. ntasks=24 with 24 CPU node (default:24).",
@@ -246,8 +245,8 @@ write the slurm jobs and print the arguments parsed (default: False)",
         suffix=args.suffix,
         python_script=args.python_script,
         root_dir=args.root_dir,
-        nodes=args.nodes,
-        ntasks=args.ntasks,
+        nodes=args.nodes[0],
+        ntasks=args.ntasks[0],
         job_prefix=args.job_prefix,
         slurm_file=args.slurm_file,
         slurm_path=args.slurm_path,
