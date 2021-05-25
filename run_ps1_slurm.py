@@ -70,7 +70,6 @@ def main(
 ):
 
     counter = 0
-    if ntasks
     for instrument in instruments:
         for field in fields:
             for bkgnd in backgrounds:
