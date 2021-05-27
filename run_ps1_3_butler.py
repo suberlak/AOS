@@ -119,7 +119,7 @@ def find_dirs(
     root_dir="/project/scichris/aos/AOS/DM-28360/",
     instruments=["comCam"],
     fields=["med"],
-    position=["focal", "extra", "intra"],
+    positions=["focal", "extra", "intra"],
 ):
 
     all_dirs = []
@@ -138,46 +138,47 @@ def find_dirs(
     return all_dirs
 
 
-def main(instruments, fields, positions, cmd_file, root_dir, run):
+def main(instruments, fields, positions, cmd_files, root_dir, run, dry_run):
 
     default_dir = os.getcwd()
     for instrument in instruments:
         for field in fields:
             for position in positions:
-                print(f"\n Running for {instrument} {field} {position}")
-                # build the name of input directory with
-                # repackaged simulated files
-                # work_dir = os.path.join(root_dir, instrument, field, position)
+                for cmd_file in cmd_files:
+                    print(f"\n Running for {instrument} {field} {position}")
+                    # build the name of input directory with
+                    # repackaged simulated files
+                    # work_dir = os.path.join(root_dir, instrument, field, position)
 
-                obshistid = calculate_obshistid(
-                    instrument, field, position, cmd_file, run
-                )
-
-                work_dir = os.path.join(
-                    root_dir, instrument, field, position, str(obshistid)
-                )
-
-                # check that there are any files in /repackaged/ dir
-                repackaged_dir = os.path.join(work_dir, "repackaged")
-                if not os.path.exists(repackaged_dir):
-                    raise RuntimeError("There is no /repackaged/ directory.")
-                elif len(os.listdir(repackaged_dir)) < 1:
-                    raise RuntimeError(
-                        "There is a /repackaged/ dir \
-but there are no files in it."
+                    obshistid = calculate_obshistid(
+                        instrument, field, position, cmd_file, run
                     )
 
-                # if the two conditions are met we can
-                # proceed to butler ingestion of raw files
-                butler_instrument = get_butler_instrument(instrument)
-                write_pipeline_yaml(work_dir, butler_instrument)
-                write_isr_script(work_dir, butler_instrument)
+                    work_dir = os.path.join(
+                        root_dir, instrument, field, position, str(obshistid)
+                    )
 
-                os.chdir(work_dir)
-                # run the script to create butler and ingest
-                print("Running sh  ./runIsr.sh")
-                subprocess.call(["sh", "./runIsr.sh"])
-                os.chdir(default_dir)
+                    # check that there are any files in /repackaged/ dir
+                    repackaged_dir = os.path.join(work_dir, "repackaged")
+                    if not os.path.exists(repackaged_dir):
+                        raise RuntimeError("There is no /repackaged/ directory.")
+                    elif len(os.listdir(repackaged_dir)) < 1:
+                        raise RuntimeError(
+                            "There is a /repackaged/ dir but there are no files in it."
+                        )
+
+                    # if the two conditions are met we can
+                    # proceed to butler ingestion of raw files
+                    butler_instrument = get_butler_instrument(instrument)
+                    write_pipeline_yaml(work_dir, butler_instrument)
+                    write_isr_script(work_dir, butler_instrument)
+                    
+                    if not dry_run:
+                        os.chdir(work_dir)
+                        # run the script to create butler and ingest
+                        print("Running sh  ./runIsr.sh")
+                        subprocess.call(["sh", "./runIsr.sh"])
+                        os.chdir(default_dir)
 
 
 if __name__ == "__main__":
@@ -233,13 +234,20 @@ will be written",
         help="Run number, assuming instrument, field, position, cmd_file\
 are the same (default:1).",
     )
+    parser.add_argument(
+        "--dry_run",
+        default=False,
+        action="store_true",
+        help="Do not run any simulation, just print commands used.",
+    )
 
     args = parser.parse_args()
     main(
         instruments=args.instruments,
         fields=args.fields,
         positions=args.positions,
-        cmd_file=args.cmd_file,
+        cmd_files=args.cmd_files,
         root_dir=args.root_dir,
         run=args.run,
+        dry_run=args.dry_run
     )
