@@ -140,7 +140,12 @@ def find_dirs(
 
 def main(instruments, fields, positions, cmd_files, root_dir, run, dry_run):
 
-    default_dir = os.getcwd()
+    default_dir = os.getcwd() # get current working directory 
+    
+    
+    
+    
+    
     for instrument in instruments:
         for field in fields:
             for position in positions:
