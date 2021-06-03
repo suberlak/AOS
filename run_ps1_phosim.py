@@ -210,11 +210,11 @@ Note that there should be M*N cores available. (default: 25)",
     parser.add_argument(
         "--root_dir",
         type=str,
-        default="/project/scichris/aos/ps1_phosim/",
+        default="/project/scichris/aos/AOS/DM-28360/",
         help="Absolute path to the work directory where .cmd and .inst \
 files can be found. That is also where the output \
 under  {instrument}{field}{position}{obshistid}\
-will be written. (default: /project/scichris/aos/ps1_phosim/)",
+will be written. (default: /project/scichris/aos/AOS/DM-28360/)",
     )
     parser.add_argument(
         "--run",
