@@ -125,7 +125,9 @@ def main(
                     if not dry_run:
                         if subprocess.call(command, shell=True) != 0:
                             raise RuntimeError("Error running: %s" % command)
-
+                else:
+                    repackager_command = ""
+                    
                 # store names of all files used by phosim to README file
                 # for good bookkeeping
                 if not opd:
