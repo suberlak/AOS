@@ -2,6 +2,7 @@ import subprocess
 import os
 import argparse
 import time
+from astropy.table import Table
 
 # this is a place to put all functions 
 # used by at least two of the 
@@ -27,7 +28,7 @@ def invert_dict(dic):
 
 
 def get_inst_dict():
-    return {"comCam": 0, "lsstCam": 1}
+    return {"comCam": 0, "lsstCam": 1, "wfs": 2}
 
 
 def get_field_dict():
