@@ -2,6 +2,7 @@ import subprocess
 import os
 import argparse
 import time
+import run_ps1_functions as func
 
 def write_readme(
     work_dir, phosim_command, inst_file, cmd_file, repackager_command, ttl_time
@@ -25,42 +26,6 @@ def write_readme(
         output.write(s)
         output.write(repackager_command)
         output.write(f"Running phosim took {ttl_time} seconds")
-
-
-def calculate_obshistid(instrument, field, position, cmd_file, run):
-
-    instDict = {"comCam": 0, "lsstCam": 1}
-    fieldDict = {"high": 0, "med": 1, "low": 2, "Baade": 3}
-    positionDict = {"focal": 0, "extra": 1, "intra": 2}
-
-    if cmd_file.find("_") > 0:
-        # eg 'noBkgndPert00_NCSA.cmd', 'noBkgndPert00_hyak.cmd'
-        # i.e. with corrected surfacemap paths
-        cmd = cmd_file.split("_")[0]
-    else:  # eg. 'noBkgndPert00.cmd'
-        # i.e. with original paths
-        cmd = cmd_file.split(".")[0]
-    cmdDict = {
-        "noBkgndPert00": 0,
-        "noBkgndPert05": 1,
-        "qckBkgndPert00": 2,
-        "qckBkgndPert05": 3,
-        "noBkgnd": 4,
-        "qckBkgnd": 5,
-    }
-    first = instDict[instrument]
-    second = fieldDict[field]
-    third = positionDict[position]
-    fourth = cmdDict[cmd]
-    obshistid = f"90{first}{second}{third}{fourth}{run}"
-    return obshistid
-
-
-def sensor_list_to_string(sensorNameList):
-    sensors = ""
-    for sensor in sensorNameList:
-        sensors += "%s|" % sensor
-    return sensors
 
 
 def main(
@@ -87,7 +52,7 @@ def main(
 
                 cmd_file_path = os.path.join(root_dir, cmd_file)
 
-                obshistid = calculate_obshistid(
+                obshistid = func.calculate_obshistid(
                     instrument, field, position, cmd_file, run
                 )
                 new_inst_file = inst_file[: -(len(".inst"))] + f"_{obshistid}.inst"
@@ -114,7 +79,7 @@ def main(
 
                 # add sensor selection
                 if len(phosim_s[0]) > 0:
-                    sensor_names = sensor_list_to_string(phosim_s)
+                    sensor_names = func.sensor_list_to_string(phosim_s)
                     command += f' -s "{sensor_names}"'
 
                 # end of the command
