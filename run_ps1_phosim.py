@@ -58,8 +58,13 @@ def main(
                     inst_file = f'opd_{instrument}_{field}_{position}_{obshistid}.inst'
                     
                 inst_file_path = os.path.join(root_dir, inst_file)
+                if not os.path.exists(inst_file_path):
+                    raise RuntimeError(f'The inst file {inst_file_path} does not exist!')
+                    
                 cmd_file_path = os.path.join(root_dir, cmd_file)
-
+                if not os.path.exists(cmd_file_path):
+                    raise RuntimeError(f'The cmd file {cmd_file_path} does not exist!')
+                    
                 # temporary patch adding obshistid 
                 #new_inst_file = inst_file[: -(len(".inst"))] + f"_{obshistid}.inst"
                 #inst_file_path = os.path.join(root_dir, new_inst_file)
