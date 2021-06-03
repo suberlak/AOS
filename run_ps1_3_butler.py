@@ -3,6 +3,7 @@ import os
 import subprocess
 import argparse
 
+
 # write the pipeline yaml file
 def write_pipeline_yaml(
     out_dir, instrument="LsstComCam", file_name="testPipeline.yaml"
@@ -86,11 +87,41 @@ def get_butler_instrument(instrument):
     return butler_instrument
 
 
+def invert_dict(dic):
+    invDic = {}
+    for key, value in zip(dic.keys(), dic.values()):
+        invDic[value] = key
+    return invDic
+
+
+def get_inst_dict():
+    return {"comCam": 0, "lsstCam": 1}
+
+
+def get_field_dict():
+    return {"high": 0, "med": 1, "low": 2, "Baade": 3}
+
+
+def get_position_dict():
+    return {"focal": 0, "extra": 1, "intra": 2}
+
+
+def get_cmd_dict():
+    return {
+        "noBkgndPert00": 0,
+        "noBkgndPert05": 1,
+        "qckBkgndPert00": 2,
+        "qckBkgndPert05": 3,
+        "noBkgnd": 4,
+        "qckBkgnd": 5,
+    }
+
+
 def calculate_obshistid(instrument, field, position, cmd_file, run):
 
-    instDict = {"comCam": 0, "lsstCam": 1}
-    fieldDict = {"high": 0, "med": 1, "low": 2, "Baade": 3}
-    positionDict = {"focal": 0, "extra": 1, "intra": 2}
+    instDict = get_inst_dict()
+    fieldDict = get_field_dict()
+    positionDict = get_position_dict()
 
     if cmd_file.find("_") > 0:
         # eg 'noBkgndPert00_NCSA.cmd', 'noBkgndPert00_hyak.cmd'
@@ -99,20 +130,46 @@ def calculate_obshistid(instrument, field, position, cmd_file, run):
     else:  # eg. 'noBkgndPert00.cmd'
         # i.e. with original paths
         cmd = cmd_file.split(".")[0]
-    cmdDict = {
-        "noBkgndPert00": 0,
-        "noBkgndPert05": 1,
-        "qckBkgndPert00": 2,
-        "qckBkgndPert05": 3,
-        "noBkgnd": 4,
-        "qckBkgnd": 5,
-    }
+    cmdDict = get_cmd_dict()
+
     first = instDict[instrument]
     second = fieldDict[field]
     third = positionDict[position]
     fourth = cmdDict[cmd]
     obshistid = f"90{first}{second}{third}{fourth}{run}"
     return obshistid
+
+
+def invert_obshistid(obshistid):
+    """Given obshistid, invert the logic and find the
+    instrument, field, position, cmd_file, run
+    """
+    instDictInv = invert_dict(get_inst_dict())
+    fieldDictInv = invert_dict(get_field_dict())
+    positionDictInv = invert_dict(get_position_dict())
+    cmdDictInv = invert_dict(get_cmd_dict())
+
+    # take last five digits
+    digits = obshistid[-5:]
+
+    first = int(digits[0])
+    second = int(digits[1])
+    third = int(digits[2])
+    fourth = int(digits[3])
+    run = int(digits[4])
+
+    instrument = instDictInv[first]
+    field = fieldDictInv[second]
+    position = positionDictInv[third]
+    cmd = cmdDictInv[fourth]
+
+    return {
+        "instrument": instrument,
+        "field": field,
+        "position": position,
+        "cmd": cmd,
+        "run": run,
+    }
 
 
 def find_dirs(
@@ -133,24 +190,21 @@ def find_dirs(
                 for sub_dir in sub_dir_names:
                     all_dirs.append(os.path.join(work_dir, sub_dir))
                 # add
-                print(" ", sub_dirs)
+                print(" ", sub_dir)
 
     return all_dirs
 
 
-def main(instruments, fields, positions, cmd_files, root_dir, run, dry_run):
+def get_dirs_obshistids(instruments, fields, 
+                        positions, cmd_files, root_dir, run):
+    obshistids = []
+    work_dirs = []
 
-    default_dir = os.getcwd() # get current working directory 
-    
-    
-    
-    
-    
     for instrument in instruments:
         for field in fields:
             for position in positions:
                 for cmd_file in cmd_files:
-                    print(f"\n Running for {instrument} {field} {position}")
+                    # print(f"\n Running for {instrument} {field} {position}")
                     # build the name of input directory with
                     # repackaged simulated files
                     # work_dir = os.path.join(root_dir, instrument, field, position)
@@ -162,36 +216,116 @@ def main(instruments, fields, positions, cmd_files, root_dir, run, dry_run):
                     work_dir = os.path.join(
                         root_dir, instrument, field, position, str(obshistid)
                     )
+                    print(
+                        f"\n {instrument} {field} {position} {cmd_file} is {obshistid} and {work_dir}"
+                    )
 
-                    # check that there are any files in /repackaged/ dir
-                    repackaged_dir = os.path.join(work_dir, "repackaged")
-                    if not os.path.exists(repackaged_dir):
-                        raise RuntimeError("There is no /repackaged/ directory.")
-                    elif len(os.listdir(repackaged_dir)) < 1:
-                        raise RuntimeError(
-                            "There is a /repackaged/ dir but there are no files in it."
-                        )
+                    obshistids.append(obshistid)
+                    work_dirs.append(work_dir)
+    return work_dirs, obshistids
 
-                    # if the two conditions are met we can
-                    # proceed to butler ingestion of raw files
-                    butler_instrument = get_butler_instrument(instrument)
-                    write_pipeline_yaml(work_dir, butler_instrument)
-                    write_isr_script(work_dir, butler_instrument)
-                    
-                    if not dry_run:
-                        os.chdir(work_dir)
-                        # run the script to create butler and ingest
-                        print("Running sh  ./runIsr.sh")
-                        subprocess.call(["sh", "./runIsr.sh"])
-                        os.chdir(default_dir)
+
+def get_work_dirs_from_obshistids(obshistids, root_dir):
+    work_dirs = []
+    for obshistid in obshistids:
+        dic = invert_obshistid(obshistid)
+        work_dir = os.path.join(
+            root_dir, dic["instrument"], dic["field"], dic["position"], str(obshistid)
+        )
+        work_dirs.append(work_dir)
+    return work_dirs
+
+
+def get_instruments_from_obshistids(obshistids):
+    instruments = []
+    for obshistid in obshistids:
+        dic = invert_obshistid(obshistid)
+        # print(dic)
+        instruments.append(dic["instrument"])
+    return instruments
+
+
+def main(instruments, fields, positions, cmd_files, root_dir, run, dry_run, obshistids):
+
+    default_dir = os.getcwd()  # get current working directory
+
+    # if obshistids are not provided, generate them from provided
+    # instrument, field, position, cmd_file
+    if len(obshistids) < 1:
+        print(
+            "Building obshistids and work_dirs from the provided names of \
+        instruments, fields, positions, cmd_files."
+        )
+        work_dirs, obshistids = get_dirs_obshistids(
+            instruments, fields, positions, cmd_files, root_dir, run
+        )
+
+    # otherwise, use the given obshistids to resolve all other named parameters,
+    # and find work_dirs
+    elif len(obshistids) > 0:
+        print(
+            "Resolving obshistids to get names of \
+        instruments, fields, positions, cmd_files."
+        )
+
+        work_dirs = get_work_dirs_from_obshistids(obshistids, root_dir)
+        instruments = get_instruments_from_obshistids(obshistids)
+
+    else:
+        print(
+            "Either obshistids or names of instruments, fields, positions, \
+        cmd files must be provided"
+        )
+
+    # ingest and run ISR for each pair of work_dir, obshistid :
+
+    for work_dir, obshistid, instrument in zip(work_dirs, obshistids, instruments):
+        print(f"Ingesting and running ISR for {work_dir}")
+
+        # check that there are any files in /repackaged/ dir
+        repackaged_dir = os.path.join(work_dir, "repackaged")
+        if not os.path.exists(repackaged_dir):
+            raise RuntimeError("There is no /repackaged/ directory.")
+        elif len(os.listdir(repackaged_dir)) < 1:
+            raise RuntimeError(
+                "There is a /repackaged/ dir but there are no files in it."
+            )
+
+        # if the two conditions are met we can
+        # proceed to butler ingestion of raw files
+        butler_instrument = get_butler_instrument(instrument)
+        write_pipeline_yaml(work_dir, butler_instrument)
+        write_isr_script(work_dir, butler_instrument)
+
+        if not dry_run:
+            os.chdir(work_dir)
+            # run the script to create butler and ingest
+            print("Running sh  ./runIsr.sh")
+            subprocess.call(["sh", "./runIsr.sh"])
+            os.chdir(default_dir)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Butler ingestion of phosim simulated data using PS1 catalogs.\
-This program writes and executes butler scripts that create a gen3 repo,\
-register appropriate instrument, ingest raws, define visits, register calibs,\
-and do the instrument signature removal."
+\
+This program writes and executes butler scripts that create a gen3 repo, \
+register appropriate instrument, ingest raws, define visits, register calibs, \
+and do the instrument signature removal. \
+The path to raw (repackaged) files is based on the obshistid, which \
+encodes the information about instrument, field, position, cmd_file used. \
+\
+Two modes of operation are possible:\
+\
+a) --obshistids (-i) arg is provided, then --instruments, --fields, \
+--positions, --cmd_files are ignored:\
+obshistid --> {instrument,field,position,cmd_file}, work_dir \
+\
+b) -instruments, --fields, --positions, --cmd_files are provided, \
+and based on these we calculate obshistid: \
+{instrument,field,position,cmd_file} --> obshistid ,  work_dir \
+\
+"
     )
 
     parser.add_argument(
@@ -216,9 +350,12 @@ eg. "high", "med", "low", "Baade"',
     parser.add_argument(
         "--cmd_files",
         type=str,
-        default=["noBkgndPert00_NCSA.cmd",  "noBkgndPert05_NCSA.cmd",
-                 "qckBkgndPert00_NCSA.cmd", "qckBkgndPert05_NCSA.cmd"
-                ],
+        default=[
+            "noBkgndPert00_NCSA.cmd",
+            "noBkgndPert05_NCSA.cmd",
+            "qckBkgndPert00_NCSA.cmd",
+            "qckBkgndPert05_NCSA.cmd",
+        ],
         help="Name of the physics command file(s) used by phosim",
     )
     parser.add_argument(
@@ -236,7 +373,7 @@ will be written",
         nargs=1,
         type=int,
         default=1,
-        help="Run number, assuming instrument, field, position, cmd_file\
+        help="Run number for the ISR, assuming instrument, field, position, cmd_file\
 are the same (default:1).",
     )
     parser.add_argument(
@@ -244,6 +381,16 @@ are the same (default:1).",
         default=False,
         action="store_true",
         help="Do not run any simulation, just print commands used.",
+    )
+    parser.add_argument(
+        "--obshistids",
+        "-i",
+        nargs="+",
+        default=[],
+        help="A list of 7-digit obshistids to ingest and ISR, eg. [9000001 9000101] (default:[]).\
+If provided, ignoring values of instrument, field, position, cmd_file, since we \
+use the numeric value of obshistid to generate these. \
+Eg. 9001001 is comCam med focal noBkgndPert00.cmd.",
     )
 
     args = parser.parse_args()
@@ -254,5 +401,6 @@ are the same (default:1).",
         cmd_files=args.cmd_files,
         root_dir=args.root_dir,
         run=args.run,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        obshistids=args.obshistids,
     )
