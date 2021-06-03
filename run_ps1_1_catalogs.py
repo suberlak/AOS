@@ -4,30 +4,7 @@ import pandas as pd
 import numpy as np
 import psycopg2
 import argparse
-
-
-def get_field_ra_dec():
-    """Read the ra,dec coordinates of simulated fields
-    for creation of phosim files. Restructure as
-    dictionary for easier access of each value.
-
-    Returns:
-    -------
-    gt_dict: a dictionary where keys are field names, eg.
-            high, med, low, Baade, so that ra,dec can be
-            accessed via eg. gt_dict['high']['ra']
-    """
-    filename = "/project/scichris/aos/ps1_query_coordinates.txt"
-    gt = Table.read(filename, format="ascii")
-
-    # rewrite as dict for easier access of coordinates
-    # of a specific field by name
-    gt_dict = {}
-    for i in range(len(gt)):
-        gt_dict[gt["name"][i]] = {"ra": gt["ra_deg"][i],
-                                  "dec": gt["dec_deg"][i]
-                                  }
-    return gt_dict
+import run_ps1_functions as func
 
 
 def get_star_catalog(
@@ -99,7 +76,8 @@ def write_phosim_header(
     mjd=59580.0,
     exposure=0.25,
     obsid=9006002,
-    defocal=False,
+    position='focal',
+    seeing=0.69
 ):
     """Write to file handle the phosim header"""
     output.write("Opsim_obshistid {}\n".format(obsid))
@@ -115,9 +93,11 @@ def write_phosim_header(
     output.write("moonphase {}\n".format(0.0))
     output.write("moonalt {}\n".format(-90))
     output.write("sunalt {}\n".format(-90))
-    output.write("Opsim_rawseeing {}\n".format(-1))
-    if defocal:
+    output.write("Opsim_rawseeing {}\n".format(seeing))
+    if position == 'extra':
         output.write("move 10 -1500.0000\n")  # write the defocal movement
+    elif position == 'intra':
+        output.write("move 10  1500.0000\n")  
     output.write("camconfig {}\n".format(camconfig))
 
 
@@ -132,7 +112,10 @@ def write_phosim_inst_file(
     opd=False,
     exposure=15,
     obsid=9006002,
-    position="defocal",
+    position="focal",
+    mjd=59580,
+    magcol=None
+    
 ):
     """Generate a phosim instance catalog from a Pandas dataframe"""
 
@@ -148,11 +131,8 @@ def write_phosim_inst_file(
     out_file = os.path.join(out_dir, phosim_file)
 
     filterid = list(passbands.keys()).index(passband)
-
-    if position == "defocal":
-        defocal = True
-    else:
-        defocal = False
+    if magcol is None:
+        magcol = passbands[passband]
 
     with open(out_file, "w") as output:
         write_phosim_header(
@@ -161,10 +141,10 @@ def write_phosim_inst_file(
             dec,
             camconfig=camconfig,
             opsim_filter=filterid,
-            mjd=59580.0,
+            mjd=mjd,
             exposure=exposure,
             obsid=obsid,
-            defocal=defocal,
+            position=position,
         )
         if opd:
             output.write("opd 0 {} {} 500".format(ra, dec))
@@ -176,13 +156,13 @@ def write_phosim_inst_file(
                         int(row["objid"]),
                         row["ra"],
                         row["dec"],
-                        row[passbands[passband]],
+                        row[magcol],
                     )
                 )
     print("Saved as ", out_file)
 
 
-def write_phosim_cmd_file(root_dir, file_name="phosim.cmd",
+def write_phosim_cmd_file(root_dir, file_name,
                           no_background=True):
     """
     Write a phosim physics commands file
@@ -235,10 +215,10 @@ def write_phosim_cmd_file(root_dir, file_name="phosim.cmd",
 
 
 def main(
-    instruments=["comCam"],
-    fields=["high"],
-    positions=["focal"],
-    exposure=0.25,
+    instruments,
+    fields,
+    positions,
+    exposure,
 ):
 
     #  connect to a database
@@ -249,7 +229,7 @@ def main(
     connection = psycopg2.connect(dbname=dbname, host=host, port=dbport)
 
     # get coordinates of stellar fields
-    gt_dict = get_field_ra_dec()
+    gt_dict = func.get_field_ra_dec()
 
     # make sure that the root dir exists
     root_dir = "/project/scichris/aos/ps1_phosim/"
@@ -295,6 +275,8 @@ def main(
                 # access the pandas catalog via dict
                 panda_catalog = catalogs[instrument][field]
 
+                #obshistid = func.calculate_obshistid(
+                #    instrument, field, position, cmd_file, run
                 write_phosim_inst_file(
                     panda_catalog,
                     ra,
@@ -329,8 +311,8 @@ eg. "high", "med", "low", "Baade"',
     parser.add_argument(
         "--positions",
         nargs="+",
-        default=["defocal"],
-        help='A list of positions to simulate, eg. "focal", "defocal". ',
+        default=["focal"],
+        help='A list of positions to simulate, eg. "focal", "intra", "extra". ',
     )
     parser.add_argument(
         "--exposure",
