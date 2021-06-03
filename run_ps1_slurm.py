@@ -1,12 +1,7 @@
 import subprocess
 import argparse
 import os
-
-
-def write_to_file(out_file, content):
-    with open(out_file, "w") as output:
-        for line in content:
-            output.write(line)
+import run_ps1_functions as func
 
 
 def write_slurm_script(
@@ -40,7 +35,7 @@ def write_slurm_script(
         'echo "ended at `date` on `hostname`" \n',
     ]
     out_file = os.path.join(slurm_path, slurm_file_name)
-    write_to_file(out_file, content)
+    func.write_to_file(out_file, content)
 
     return out_file
 
