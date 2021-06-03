@@ -208,7 +208,7 @@ def main(
                             panda_cat = get_opd_ra_dec(instrument, raField, decField)
                             write_opd_inst_file(panda_cat, raField, decField,
                                 phosim_file=opd_fpath, passband="r", out_dir="./", camconfig=3,
-                                exposure=15, obsid=obshistid, position=position, mjd=59580,
+                                exposure=exposure, obsid=obshistid, position=position, mjd=59580,
                                 magcol=None)
 
 
@@ -223,20 +223,21 @@ if __name__ == "__main__":
         "--instruments",
         nargs="+",
         default=["comCam"],
-        help='A list of instruments, eg. "lsstCam", "comCam" ',
+        help='A list of instruments based on which to generate OPD. \
+        We can use "lsstCam", "comCam" or "wfs" (default:comCam)',
     )
     parser.add_argument(
         "--fields",
         nargs="+",
         default=["high"],
         help='A list of field names to generate, \
-eg. "high", "med", "low", "Baade"',
+eg. "high", "med", "low", "Baade" (default: high)',
     )
     parser.add_argument(
         "--positions",
         nargs="+",
         default=["focal"],
-        help='A list of positions to simulate, eg. "focal", "intra", "extra". ',
+        help='A list of positions to simulate, eg. "focal", "intra", "extra". (default: focal)',
     )
     parser.add_argument(
         "--bkgnds",
@@ -255,16 +256,16 @@ eg. "high", "med", "low", "Baade"',
         type=str,
         default="/project/scichris/aos/AOS/DM-28360/",
         help="Absolute path to the work directory where .inst  \
-files should be stored. ",
+files should be stored.(default: /project/scichris/aos/AOS/DM-28360/) ",
     )
     
     parser.add_argument(
         "--exposure",
         nargs=1,
         type=float,
-        default=0.25,
+        default=15,
         help="Exposure time for the instance catalogs, stored as SIM_VISTIME \
-in the .inst file",
+in the .inst file (default: 15)",
     )
     parser.add_argument(
         "--dry_run",
