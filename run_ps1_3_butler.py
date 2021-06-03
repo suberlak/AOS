@@ -195,8 +195,7 @@ def find_dirs(
     return all_dirs
 
 
-def get_dirs_obshistids(instruments, fields, 
-                        positions, cmd_files, root_dir, run):
+def get_dirs_obshistids(instruments, fields, positions, cmd_files, root_dir, run):
     obshistids = []
     work_dirs = []
 
@@ -245,7 +244,17 @@ def get_instruments_from_obshistids(obshistids):
     return instruments
 
 
-def main(instruments, fields, positions, cmd_files, root_dir, run, dry_run, obshistids):
+def main(
+    instruments,
+    fields,
+    positions,
+    cmd_files,
+    root_dir,
+    run,
+    dry_run,
+    obshistids,
+    clobber,
+):
 
     default_dir = os.getcwd()  # get current working directory
 
@@ -299,6 +308,15 @@ def main(instruments, fields, positions, cmd_files, root_dir, run, dry_run, obsh
 
         if not dry_run:
             os.chdir(work_dir)
+
+            # if clobber, then delete already existing repo there
+            repo_dir = os.path.join(work_dir, "DATA")
+            if os.path.exists(repo_dir):
+                print(f"There is already {repo_dir}")
+                if clobber:
+                    print(f"Deleting {repo_dir}")
+                    # os.system('cmd /k "date"')
+                    subprocess.call(f"rm -rf {repo_dir}", shell=True)
             # run the script to create butler and ingest
             print("Running sh  ./runIsr.sh")
             subprocess.call(["sh", "./runIsr.sh"])
@@ -383,6 +401,13 @@ are the same (default:1).",
         help="Do not run any simulation, just print commands used.",
     )
     parser.add_argument(
+        "--clobber",
+        default=False,
+        action="store_true",
+        help="Delete the existing DATA gen3 repo. ",
+    )
+
+    parser.add_argument(
         "--obshistids",
         "-i",
         nargs="+",
@@ -403,4 +428,5 @@ Eg. 9001001 is comCam med focal noBkgndPert00.cmd.",
         run=args.run,
         dry_run=args.dry_run,
         obshistids=args.obshistids,
+        clobber=args.clobber,
     )
