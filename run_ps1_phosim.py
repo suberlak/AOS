@@ -12,20 +12,19 @@ def write_readme(
     phoSim input files used to run the simulation
     """
     filename = "README.txt"
-    outfile = os.path.join(work_dir, filename)
-    with open(outfile, "w") as output:
-
-        output.write("Files in /raw/ were created with this command:\n\n\n")
-        output.write(phosim_command)
-        output.write("\n\n\n")
-        output.write(f"The instance catalog was {inst_file}\n")
-        output.write("\n")
-        output.write(f"The physics command catalog was {cmd_file}\n")
-        output.write("\n\n")
-        s = "Files from /raw/ were repackaged to /repackaged/ with \n"
-        output.write(s)
-        output.write(repackager_command)
-        output.write(f"Running phosim took {ttl_time} seconds")
+    out_file = os.path.join(work_dir, filename)
+    content = ["Files in /raw/ were created with this command:\n\n\n",
+              phosim_command,
+              "\n\n\n",
+              f"The instance catalog was {inst_file}\n",
+              "\n",
+              f"The physics command catalog was {cmd_file}\n",
+              "\n\n",
+              "Files from /raw/ were repackaged to /repackaged/ with \n",
+              repackager_command,
+              f"Running phosim took {ttl_time} seconds"
+              ]
+    func.write_to_file(out_file, content)
 
 
 def main(
