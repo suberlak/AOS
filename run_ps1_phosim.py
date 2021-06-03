@@ -5,13 +5,13 @@ import time
 import run_ps1_functions as func
 
 def write_readme(
-    work_dir, phosim_command, inst_file, cmd_file, repackager_command, ttl_time
+    work_dir, phosim_command, inst_file, cmd_file, repackager_command, ttl_time,
+    filename
 ):
     """
     Store information about the .inst and .cmd
     phoSim input files used to run the simulation
     """
-    filename = "README.txt"
     out_file = os.path.join(work_dir, filename)
     content = ["Files in /raw/ were created with this command:\n\n\n",
               phosim_command,
@@ -39,23 +39,30 @@ def main(
     root_dir,
     run,
     dry_run,
+    opd
 ):
 
     for instrument in instruments:
         for field in fields:
             for position in positions:
                 print("\n", instrument, field, position)
-                # define instance catalog and physics command file
-                inst_file = f"stars_{instrument}_PS1_{field}_{position}.inst"
-                inst_file_path = os.path.join(root_dir, inst_file)
-
-                cmd_file_path = os.path.join(root_dir, cmd_file)
-
+                
                 obshistid = func.calculate_obshistid(
                     instrument, field, position, cmd_file, run
                 )
-                new_inst_file = inst_file[: -(len(".inst"))] + f"_{obshistid}.inst"
-                inst_file_path = os.path.join(root_dir, new_inst_file)
+                
+                # define instance catalog and physics command file
+                if not opd:
+                    inst_file = f"stars_{instrument}_PS1_{field}_{position}_{obshistid}.inst"
+                else:
+                    inst_file = f'opd_{instrument}_{field}_{position}_{obshistid}.inst'
+                    
+                inst_file_path = os.path.join(root_dir, inst_file)
+                cmd_file_path = os.path.join(root_dir, cmd_file)
+
+                # temporary patch adding obshistid 
+                #new_inst_file = inst_file[: -(len(".inst"))] + f"_{obshistid}.inst"
+                #inst_file_path = os.path.join(root_dir, new_inst_file)
 
                 if instrument == "lsstCam":
                     instr = "lsst"
@@ -66,11 +73,18 @@ def main(
                 work_dir = os.path.join(
                     root_dir, instrument, field, position, str(obshistid)
                 )
-                out_dir = os.path.join(work_dir, "raw")
+                if not opd:
+                    out_dir = os.path.join(work_dir, "raw")
+                else:
+                    out_dir = os.path.join(work_dir, "opd")
+                    
                 if not dry_run:
                     if not os.path.exists(out_dir):
                         os.makedirs(out_dir)
-                log_file = os.path.join(work_dir, "starPhoSim.log")
+                if not opd:
+                    log_file = os.path.join(work_dir, "starPhoSim.log")
+                else:
+                    log_file = os.path.join(work_dir, "opdPhoSim.log")
 
                 # run phosim: beginning of the command
                 command = f"python {phosim_path} {inst_file_path} -i {instr} -e 1 \
@@ -94,20 +108,26 @@ def main(
                 print(f"Running phosim took {ttl_time:.3f} seconds")
 
                 # repackage the output
-                focuszDict = {"focal": 0, "intra": 1500, "extra": -1500}
-                focusz = focuszDict[position]
-                repackaged_dir = os.path.join(work_dir, "repackaged")
-                command = f"phosim_repackager.py {out_dir} \
-    --out_dir {repackaged_dir} --inst {instr} --focusz {focusz}"
+                if not opd:
+                    focuszDict = {"focal": 0, "intra": 1500, "extra": -1500}
+                    focusz = focuszDict[position]
+                    repackaged_dir = os.path.join(work_dir, "repackaged")
+                    command = f"phosim_repackager.py {out_dir} \
+        --out_dir {repackaged_dir} --inst {instr} --focusz {focusz}"
 
-                print(f"\nRunning via subprocess: \n {command}\n")
-                repackager_command = command
-                if not dry_run:
-                    if subprocess.call(command, shell=True) != 0:
-                        raise RuntimeError("Error running: %s" % command)
+                    print(f"\nRunning via subprocess: \n {command}\n")
+                    repackager_command = command
+                    if not dry_run:
+                        if subprocess.call(command, shell=True) != 0:
+                            raise RuntimeError("Error running: %s" % command)
 
                 # store names of all files used by phosim to README file
                 # for good bookkeeping
+                if not opd:
+                    filename='README.txt'
+                else:
+                    filename='README_OPD.txt'
+                    
                 if not dry_run:
                     write_readme(
                         work_dir,
@@ -116,6 +136,7 @@ def main(
                         cmd_file_path,
                         repackager_command,
                         ttl_time,
+                        filename
                     )
 
 
@@ -125,20 +146,26 @@ if __name__ == "__main__":
         "--instruments",
         nargs="+",
         default=["comCam"],
-        help='A list of instruments, eg. "lsstCam", "comCam" ',
+        help='A list of instruments, eg. "lsstCam", "comCam", "wfs" (default: comCam).\
+        Note - "wfs" uses "lsstCam" as an instrument for gen3 ingestion, \
+        but it runs with selecting corner sensors only when running phoSim, \
+        and  has a separate obshistid to allow for simulation of the \
+        Full Array Mode, i.e. "lsstCam", as well as corner sensors only, \
+        i.e. "wfs".'
     )
     parser.add_argument(
         "--fields",
         nargs="+",
         default=["high"],
         help='A list of field names to generate, \
-eg. "high", "med", "low", "Baade"',
+eg. "high", "med", "low", "Baade" (default" high)',
     )
     parser.add_argument(
         "--positions",
         nargs="+",
         default=["focal"],
-        help='A list of positions to simulate, eg. "focal", "extra", "intra". ',
+        help='A list of positions to simulate, eg. "focal", "extra", "intra". \
+        (default: focal)',
     )
     parser.add_argument(
         "--phosim_t",
@@ -147,7 +174,7 @@ eg. "high", "med", "low", "Baade"',
         default=[1],
         help="Phosim argument to multi-thread the calculation (M) on \
 a per-astronomical-source basis. \
-Note that there should be M*N cores available.",
+Note that there should be M*N cores available. (default: 1)",
     )
     parser.add_argument(
         "--phosim_p",
@@ -155,30 +182,29 @@ Note that there should be M*N cores available.",
         nargs=1,
         default=[25],
         help="Phosim argument to run N copies of raytrace. \
-Note that there should be M*N cores available.",
+Note that there should be M*N cores available. (default: 25)",
     )
     parser.add_argument(
         "--phosim_s",
         "-s",
         nargs="+",
         default=[""],
-        help="Phosim argument to specify which sensors to simulate. Eg. R22_S00 R22_S11 \
-(default:"
-        ", i.e. not specify anything)",
+        help='Phosim argument to specify which sensors to simulate. Eg. R22_S00 R22_S11 \
+(default:"", i.e. not specify anything)',
     )
 
     parser.add_argument(
         "--cmd_file",
         type=str,
         default="noBkgnd.cmd",
-        help="Name of the physics command file used by phosim",
+        help="Name of the physics command file used by phosim (default: noBkgnd.cmd)",
     )
 
     parser.add_argument(
         "--phosim_path",
         type=str,
         default="/project/scichris/aos/phosim_syseng4/phosim.py",
-        help="Absolute path to phosim.py",
+        help="Absolute path to phosim.py. (default: /project/scichris/aos/phosim_syseng4/phosim.py)",
     )
 
     parser.add_argument(
@@ -188,7 +214,7 @@ Note that there should be M*N cores available.",
         help="Absolute path to the work directory where .cmd and .inst \
 files can be found. That is also where the output \
 under  {instrument}{field}{position}{obshistid}\
-will be written",
+will be written. (default: /project/scichris/aos/ps1_phosim/)",
     )
     parser.add_argument(
         "--run",
@@ -197,7 +223,7 @@ will be written",
         type=int,
         default=1,
         help="Run number, assuming instrument, field, position, cmd_file\
-are the same (default:1).",
+are the same (default: 1).",
     )
     parser.add_argument(
         "--dry_run",
@@ -206,6 +232,14 @@ are the same (default:1).",
         help="Do not run any simulation, just print commands used.",
     )
 
+    parser.add_argument(
+        "--opd",
+        default=False,
+        action="store_true",
+        help="A flag whether to run the OPD simulation for a given combination of \
+        instrument, field, position, cmd_file (default: False)",
+    )
+    
     args = parser.parse_args()
     main(
         instruments=args.instruments,
@@ -219,4 +253,5 @@ are the same (default:1).",
         root_dir=args.root_dir,
         run=args.run,
         dry_run=args.dry_run,
+        opd=args.opd
     )
