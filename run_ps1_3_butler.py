@@ -2,7 +2,7 @@ import yaml
 import os
 import subprocess
 import argparse
-
+import run_ps1_functions as func
 
 # write the pipeline yaml file
 def write_pipeline_yaml(
@@ -78,7 +78,6 @@ def write_isr_script(out_dir, instrument="LsstComCam"):
 
     print(f"Saved as {outFile}")
 
-
 def get_butler_instrument(instrument):
     if instrument == "lsstCam":
         butler_instrument = "LsstCam"
@@ -87,67 +86,15 @@ def get_butler_instrument(instrument):
     return butler_instrument
 
 
-def invert_dict(dic):
-    invDic = {}
-    for key, value in zip(dic.keys(), dic.values()):
-        invDic[value] = key
-    return invDic
-
-
-def get_inst_dict():
-    return {"comCam": 0, "lsstCam": 1}
-
-
-def get_field_dict():
-    return {"high": 0, "med": 1, "low": 2, "Baade": 3}
-
-
-def get_position_dict():
-    return {"focal": 0, "extra": 1, "intra": 2}
-
-
-def get_cmd_dict():
-    return {
-        "noBkgndPert00": 0,
-        "noBkgndPert05": 1,
-        "qckBkgndPert00": 2,
-        "qckBkgndPert05": 3,
-        "noBkgnd": 4,
-        "qckBkgnd": 5,
-    }
-
-
-def calculate_obshistid(instrument, field, position, cmd_file, run):
-
-    instDict = get_inst_dict()
-    fieldDict = get_field_dict()
-    positionDict = get_position_dict()
-
-    if cmd_file.find("_") > 0:
-        # eg 'noBkgndPert00_NCSA.cmd', 'noBkgndPert00_hyak.cmd'
-        # i.e. with corrected surfacemap paths
-        cmd = cmd_file.split("_")[0]
-    else:  # eg. 'noBkgndPert00.cmd'
-        # i.e. with original paths
-        cmd = cmd_file.split(".")[0]
-    cmdDict = get_cmd_dict()
-
-    first = instDict[instrument]
-    second = fieldDict[field]
-    third = positionDict[position]
-    fourth = cmdDict[cmd]
-    obshistid = f"90{first}{second}{third}{fourth}{run}"
-    return obshistid
-
 
 def invert_obshistid(obshistid):
     """Given obshistid, invert the logic and find the
     instrument, field, position, cmd_file, run
     """
-    instDictInv = invert_dict(get_inst_dict())
-    fieldDictInv = invert_dict(get_field_dict())
-    positionDictInv = invert_dict(get_position_dict())
-    cmdDictInv = invert_dict(get_cmd_dict())
+    instDictInv = func.invert_dict(func.get_inst_dict())
+    fieldDictInv = func.invert_dict(func.get_field_dict())
+    positionDictInv = func.invert_dict(func.get_position_dict())
+    cmdDictInv = func.invert_dict(func.get_cmd_dict())
 
     # take last five digits
     digits = obshistid[-5:]
@@ -208,7 +155,7 @@ def get_dirs_obshistids(instruments, fields, positions, cmd_files, root_dir, run
                     # repackaged simulated files
                     # work_dir = os.path.join(root_dir, instrument, field, position)
 
-                    obshistid = calculate_obshistid(
+                    obshistid = func.calculate_obshistid(
                         instrument, field, position, cmd_file, run
                     )
 
@@ -227,7 +174,7 @@ def get_dirs_obshistids(instruments, fields, positions, cmd_files, root_dir, run
 def get_work_dirs_from_obshistids(obshistids, root_dir):
     work_dirs = []
     for obshistid in obshistids:
-        dic = invert_obshistid(obshistid)
+        dic = func.invert_obshistid(obshistid)
         work_dir = os.path.join(
             root_dir, dic["instrument"], dic["field"], dic["position"], str(obshistid)
         )
@@ -238,7 +185,7 @@ def get_work_dirs_from_obshistids(obshistids, root_dir):
 def get_instruments_from_obshistids(obshistids):
     instruments = []
     for obshistid in obshistids:
-        dic = invert_obshistid(obshistid)
+        dic = func.invert_obshistid(obshistid)
         # print(dic)
         instruments.append(dic["instrument"])
     return instruments
