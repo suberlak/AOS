@@ -28,17 +28,17 @@ def write_readme(
 
 
 def main(
-    instruments=["comCam"],
-    fields=["high"],
-    positions=["focal"],
-    phosim_t=1,
-    phosim_p=25,
-    phosim_s=[""],
-    cmd_file="noBkgndPert00.cmd",
-    phosim_path="/project/scichris/aos/phosim_syseng4/phosim.py",
-    root_dir="/project/scichris/aos/ps1_phosim/",
-    run=1,
-    dry_run=False,
+    instruments,
+    fields,
+    positions,
+    phosim_t,
+    phosim_p,
+    phosim_s,
+    cmd_file,
+    phosim_path,
+    root_dir,
+    run,
+    dry_run,
 ):
 
     for instrument in instruments:
