@@ -27,6 +27,7 @@ def invert_dict(dic):
     return invDic
 
 
+
 def get_inst_dict():
     return {"comCam": 0, "lsstCam": 1, "wfs": 2}
 
@@ -72,6 +73,35 @@ def calculate_obshistid(instrument, field, position, cmd_file, run):
     obshistid = f"90{first}{second}{third}{fourth}{run}"
     return obshistid
 
+
+def invert_obshistid(obshistid):
+    ''' Given obshistid, invert the logic and find the 
+    instrument, field, position, cmd_file, run
+    '''
+    instDictInv = invert_dict(get_inst_dict())
+    fieldDictInv = invert_dict(get_field_dict())
+    positionDictInv = invert_dict(get_position_dict())
+    cmdDictInv = invert_dict(get_cmd_dict())
+    
+   # take last five digits
+    digits = obshistid[-5:]
+
+    first=int(digits[0])
+    second=int(digits[1])
+    third=int(digits[2])
+    fourth=int(digits[3])
+    run=int(digits[4])
+
+
+    instrument = instDictInv[first]
+    field = fieldDictInv[second]
+    position= positionDictInv[third]
+    cmd = cmdDictInv[fourth]
+    
+    return {'instrument':instrument, 'field':field, 
+            'position':position, 'cmd':cmd, 
+            'run':run
+           }
 
 def sensor_list_to_string(sensorNameList):
     sensors = ""
