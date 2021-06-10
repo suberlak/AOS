@@ -297,20 +297,20 @@ and based on these we calculate obshistid: \
         "--instruments",
         nargs="+",
         default=["comCam"],
-        help='A list of instruments, eg. "lsstCam", "comCam" ',
+        help='A list of instruments, eg. "lsstCam", "comCam" (default: comCam)',
     )
     parser.add_argument(
         "--fields",
         nargs="+",
         default=["high"],
         help='A list of field names to generate, \
-eg. "high", "med", "low", "Baade"',
+eg. "high", "med", "low", "Baade" (default: high)',
     )
     parser.add_argument(
         "--positions",
         nargs="+",
         default=["focal"],
-        help='A list of positions to simulate, eg. "focal", "extra", "intra". ',
+        help='A list of positions to simulate, eg. "focal", "extra", "intra". (default: focal)',
     )
     parser.add_argument(
         "--cmd_files",
@@ -321,7 +321,7 @@ eg. "high", "med", "low", "Baade"',
             "qckBkgndPert00_NCSA.cmd",
             "qckBkgndPert05_NCSA.cmd",
         ],
-        help="Name of the physics command file(s) used by phosim",
+        help="Name of the physics command file(s) used by phosim (default: all four - {no/qck bkgnd}x{Pert00,Pert05})",
     )
     parser.add_argument(
         "--root_dir",
@@ -330,7 +330,7 @@ eg. "high", "med", "low", "Baade"',
         help="Absolute path to the work directory where .cmd and .inst \
 files can be found. That is also where the output \
 under  {instrument}{field}{position}{obshistid}\
-will be written",
+will be written (default: /project/scichris/aos/AOS/DM-28360/)",
     )
     parser.add_argument(
         "--run",
@@ -345,13 +345,13 @@ are the same (default:1).",
         "--dry_run",
         default=False,
         action="store_true",
-        help="Do not run any simulation, just print commands used.",
+        help="Do not run any simulation, just print commands used. (default: False)",
     )
     parser.add_argument(
         "--clobber",
         default=False,
         action="store_true",
-        help="Delete the existing DATA gen3 repo. ",
+        help="Delete the existing DATA gen3 repo. (default: False)",
     )
 
     parser.add_argument(
@@ -362,7 +362,7 @@ are the same (default:1).",
         help="A list of 7-digit obshistids to ingest and ISR, eg. [9000001 9000101] (default:[]).\
 If provided, ignoring values of instrument, field, position, cmd_file, since we \
 use the numeric value of obshistid to generate these. \
-Eg. 9001001 is comCam med focal noBkgndPert00.cmd.",
+Eg. 9001001 is comCam med focal noBkgndPert00.cmd. (default: None)",
     )
 
     args = parser.parse_args()
