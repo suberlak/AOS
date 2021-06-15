@@ -127,7 +127,7 @@ def get_wfs_sensor_names_xy():
     return sensorNames, xCenter, yCenter
 
 
-def get_opd_ra_dec(instrument, raField, decField, rotskypos=0):
+def get_opd_ra_dec(instrument, raField, decField, rotskypos):
     if instrument == 'comCam':
         sensorNames, xCenter, yCenter = get_all_sensor_names_xy(LsstComCam().getCamera())
 
@@ -206,6 +206,10 @@ def main(
                         # obtain ra,dec coords of the OPD
                         # given the instrument and pointing
                         # assuming we take the center of each CCD 
+                        
+                        # NOTE: this is ONLY used for the header of hte inst file
+                        # the actual OPD field positions are irrespective of the 
+                        # boresight
                         raField = gt_dict[field]["ra"] 
                         decField = gt_dict[field]["dec"]
 
@@ -215,7 +219,7 @@ def main(
                         opd_fpath = os.path.join(root_dir, opd_fname)
                         
                         if not dry_run:
-                            panda_cat = get_opd_ra_dec(instrument, raField, decField)
+                            panda_cat = get_opd_ra_dec(instrument, raField=0, decField=0,rotskypos=0)
                             write_opd_inst_file(panda_cat, raField, decField,
                                 phosim_file=opd_fpath, passband="r", out_dir="./", camconfig=3,
                                 exposure=exposure, obsid=obshistid, position=position, mjd=59580,
