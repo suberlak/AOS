@@ -157,17 +157,18 @@ def get_opd_ra_dec(instrument, raField, decField, rotskypos=0):
 
     raList , decList = skySim.getRaDecInDeg()
 
-            
-    mags = skySim.getStarMag()
-    coords = Table(data=[raList, decList, xCenter, yCenter, mags], 
-                 names=['ra','dec', 'xPx', 'yPx','r' ]  )
-        
     # Note:  ra for phosim is (0 <= ra <= 360). But the 
     # field position might be < 0 (-180 <= field_ra <= 180).
     # So here I change 
     # the (0,360) range to (-180,180) range:
-    m = coords['ra']
-    coords['ra'][m]  = coords['ra'][m]-360
+    m =raList>180
+    raList[m] = raList[m] - 360
+    
+    mags = skySim.getStarMag()
+    coords = Table(data=[raList, decList, xCenter, yCenter, mags], 
+                 names=['ra','dec', 'xPx', 'yPx','r' ]  )
+        
+ 
     
     # add a column with object id 
     coords['objid'] = np.arange(len(coords))
