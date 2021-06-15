@@ -34,10 +34,11 @@ def write_phosim_header(
     output.write("moonalt {}\n".format(-90))
     output.write("sunalt {}\n".format(-90))
     output.write("Opsim_rawseeing {}\n".format(seeing))
-    if position == 'extra':
-        output.write("move 10 -1500.0000\n")  # write the defocal movement
-    elif position == 'intra':
-        output.write("move 10  1500.0000\n")  
+    # NB: no defocal movement for OPD! 
+#     if position == 'extra':
+#         output.write("move 10 -1500.0000\n")  # write the defocal movement
+#     elif position == 'intra':
+#         output.write("move 10  1500.0000\n")  
     output.write("camconfig {}\n".format(camconfig))
 
 
