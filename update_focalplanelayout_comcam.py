@@ -17,7 +17,16 @@ headerLines, contentLines = up.readFile('/project/scichris/aos/phosim_syseng4/da
 # store sensors in the mapper in  a variable
 mapperSensors = list(camera.getNameMap().keys())
 
+# DEROTATE PHOSIM? 
+derotate_phosim = True
 
+if derotate_phosim:
+    print('Derotating phosim')
+    ticket_number= 'DM-30367' # both: obs_lsst orientation
+else:
+    print('Keeping phosim orientation')
+    ticket_number='DM-29264' # comcam 
+    
 # update the content 
 newContentLines = []
 for line in contentLines:
@@ -49,19 +58,30 @@ for line in contentLines:
                                                     cameraGeom.FOCAL_PLANE)
 
         xc_microns , yc_microns = 1000*xc_mm , 1000*yc_mm
-        xpos, ypos = float(splitContent[1]), float(splitContent[2])
+        #xpos, ypos = float(splitContent[1]), float(splitContent[2])
         #print(xpos, ypos, '-->', 
         #      yp_microns, xp_microns, 
         #      'dx:', xpos - yp_microns, 
         #      'dy:', ypos-xp_microns)
-        newSplitContent[1] = str(round(yc_microns,2))
-        newSplitContent[2] = str(round(xc_microns,2))
-
+        
+        # [1] is x-pos, [2] is y-pos 
+        if derotate_phosim:  # x_phosim <-- x_lsst, i.e. no transpose
+            newSplitContent[1] = str(round(xc_microns,2))
+            newSplitContent[2] = str(round(yc_microns,2))
+            
+        else: # x_phosim <-- y_obslsst , i.e. apply transpose
+            newSplitContent[1] = str(round(yc_microns,2))
+            newSplitContent[2] = str(round(xc_microns,2))
 
         # update the number of  x px, y px 
-        xpx, ypx = splitContent[4], splitContent[5]
-
-        xnew, ynew = bbox.getHeight(), bbox.getWidth() # rotated wrt lsstCam ... 
+        # old values 
+        #xpx, ypx = splitContent[4], splitContent[5]
+        
+        if derotate_phosim:
+            xnew, ynew = bbox.getWidth(), bbox.getHeight() # same as lsstCam  
+        else:
+            xnew, ynew = bbox.getHeight(), bbox.getWidth() # rotated wrt lsstCam ... 
+            
         newSplitContent[4] = str(xnew)
         newSplitContent[5] = str(ynew)
 
@@ -74,7 +94,7 @@ for line in contentLines:
         newContentLines.append(' '.join(newSplitContent)+'\n')
     
 # store the updated version: the header and  updated  content lines 
-fname = "/project/scichris/aos/phosim_syseng4/data/comcam/focalplanelayout_upd.txt"
+fname = f"/project/scichris/aos/phosim_syseng4/data/comcam/focalplanelayout_{ticket_number}.txt"
 f = open(fname, "w")
 f.writelines(headerLines)
 f.writelines(newContentLines)
