@@ -2,7 +2,6 @@ import updatePhosimFunctions as up
 from lsst.obs.lsst import LsstComCam
 import numpy as np 
 
-
 # read all the lines to a list : 
 pathToFile = '/project/scichris/aos/phosim_syseng4/data/comcam/segmentation_old.txt'
 
@@ -17,6 +16,20 @@ camera = LsstComCam().getCamera()
 # Update the data 
 newSensorData  = {}
   
+    
+# DEROTATE PHOSIM? 
+derotate_phosim = True
+
+
+if derotate_phosim:
+    print('Derotating phosim')
+    ticket_number = 'DM-30367' # both: obs_lsst orientation
+else:
+    print('Keeping phosim orientation')
+    ticket_number = 'DM-29264' # comcam 
+    
+    
+    
 # running only over CCDs in the mapper,
 # even though originally that comcam segmentation.txt 
 # had data for guide and corner sensors ... (basically it was 
@@ -26,7 +39,7 @@ for sensorName in camera.getNameIter():
     print('Running %s'%sensorName)
     newName = up.getNewSensorName(sensorName)
     
-    # get the lsstCam data for that sensor 
+    # get the lsstComCam data for that sensor 
     #print(newName)
     lsstDetectors = camera.get(newName)
     
@@ -45,14 +58,22 @@ for sensorName in camera.getNameIter():
             
             # update sensor px_x, px_y 
             bbox = lsstDetectors.getBBox()
-            px_y = bbox.getDimensions()[0]
-            px_x = bbox.getDimensions()[1]
+            if derotate_phosim:
+                print('Rotation x,y dimension to 4072x4000')
+                px_x = bbox.getDimensions()[0]
+                px_y = bbox.getDimensions()[1]
+                
+            else:
+                print("Keeping original dimension x,y of 4000x4072")
+                px_y = bbox.getDimensions()[0]
+                px_x = bbox.getDimensions()[1]
+                
             newSplitContent[2] = str(px_x)
             newSplitContent[3] = str(px_y)
             
             # print information...
-            old_px_x = splitContent[2]
-            old_px_y = splitContent[3]
+            #old_px_x = splitContent[2]
+            #old_px_y = splitContent[3]
             #if old_px_x !=  str(px_x) : 
                 #print(sensorName, old_px_x, old_px_y,  '--> ', newName, px_x, px_y)
             
@@ -105,18 +126,28 @@ for sensorName in camera.getNameIter():
                     # amp.getBBox() is the only one that explains the extent of the amplifier 
                     # in sensor  coords ... 
                     bbox = amp.getBBox()
-
-                    # here I assign them to match the phoSim Transposed system 
-                    xlo = bbox.getMinY()
-                    xhi = bbox.getMaxY()
-                    ylo = bbox.getMinX()
-                    yhi = bbox.getMaxX()
+                    
+                    if derotate_phosim:
+                        # make phosim system the same as obs_lsst , i.e. 
+                        # X,Y (obs_lsst) --> X,Y (phosim)
+                        xlo = bbox.getMinX()
+                        xhi = bbox.getMaxX()
+                        ylo = bbox.getMinY()
+                        yhi = bbox.getMaxY()
+                        
+                    else:
+                        # assign the dimensions to match the phoSim Transposed system ,i.e.
+                        # X,Y (obs_lsst) --> Y,X (phosim) 
+                        xlo = bbox.getMinY()
+                        xhi = bbox.getMaxY()
+                        ylo = bbox.getMinX()
+                        yhi = bbox.getMaxX()
                     
                     #print(amp.getName(), xlo,xhi,ylo,yhi)
-                    xlo_old = splitContent[1]
-                    xhi_old = splitContent[2]
-                    ylo_old = splitContent[3]
-                    yhi_old = splitContent[4]
+#                     xlo_old = splitContent[1]
+#                     xhi_old = splitContent[2]
+#                     ylo_old = splitContent[3]
+#                     yhi_old = splitContent[4]
                     
                     
                     #print('Updating', amp.getName(), xlo_old, xhi_old, ylo_old, yhi_old, 
@@ -161,38 +192,72 @@ for sensorName in camera.getNameIter():
                         newSplitContent[5] = serialread
                         
                      
-                    
-                    # update the overscan / prescan values 
-                    # preserving here phosim's rotation of 
-                    # 90 degrees to the left wrt lsstCam ... 
-                    
-                    #      phosim        < ---        lsstCam 
-                    #
-                    # serial overscan              parallel prescan
-                    # serial prescan               parallel overscan
-                    # parallel overscan            serial overscan
-                    # parallel prescan             serial prescan 
-                    
-                    # eg.      3             0            10            10 
-                    #     parallel pre | serial over | serial pre | parallel over 
-                    #          A             B            C              D 
-                    
-                    # ITL      3             0            48            32
-                    # E2V     10             0            46            54
-                    
-                    # these numbers can be achieved from :
-                    #oldA,oldB,oldC,oldD = splitContent[15], splitContent[16], splitContent[17], splitContent[18]
-                    
-                    bbox = amp.getRawSerialPrescanBBox()
-                    A = bbox.getWidth()
-                    B = '0'
+                    if derotate_phosim:
+                        # update the overscan / prescan values,
+                        # keeping the lsstCam orientation
+                        
+                        # phosim          < --  obs_lsst 
+                        # parallel prescan      parallel prescan 
+                        # parallel overscan     parallel overscan
+                        # serial prescan        serial prescan 
+                        # serial overscan       serial overscan 
+                        
+                        
+                        # eg.   3             0            10            10 
+                        #     parallel pre | serial over | serial pre | parallel over 
+                        #       A             B            C              D 
+                        # 
+                        # ITL   0          |  32          | 3         | 48 
+                        
+                        # parallel prescan 
+                        A = '0'
+                        
+                        # serial overscan
+                        bbox = amp.getRawSerialOverscanBBox()
+                        B = bbox.getWidth()
+                        
+                        # serial prescan
+                        bbox = amp.getRawSerialPrescanBBox()
+                        C = bbox.getWidth()
+                        
+                        # parallel overscan
+                        bbox = amp.getRawParallelOverscanBBox()
+                        D = bbox.getHeight()
+                        
+                    else:
+                        # update the overscan / prescan values 
+                        # preserving here phosim's rotation of 
+                        # 90 degrees to the left wrt lsstCam ... 
 
-                    bbox = amp.getRawParallelOverscanBBox()
-                    C = bbox.getHeight()
+                        #      phosim        < ---        lsstCam 
+                        #
+                        # serial overscan              parallel prescan
+                        # serial prescan               parallel overscan
+                        # parallel overscan            serial overscan
+                        # parallel prescan             serial prescan 
 
-                    bbox = amp.getRawSerialOverscanBBox()
-                    D = bbox.getWidth()
-                    #print(A,B,C,D)
+                        # eg.      3             0            10            10 
+                        #     parallel pre | serial over | serial pre | parallel over 
+                        #          A             B            C              D 
+
+                        # ITL      3             0            48            32
+                        # E2V     10             0            46            54
+
+                        # these numbers can be achieved from :
+                        #oldA,oldB,oldC,oldD = splitContent[15], splitContent[16], splitContent[17], splitContent[18]
+
+                        # parallel prescan from serial prescan 
+                        bbox = amp.getRawSerialPrescanBBox()
+                        A = bbox.getWidth()
+                        B = '0'
+
+                        bbox = amp.getRawParallelOverscanBBox()
+                        C = bbox.getHeight()
+
+                        bbox = amp.getRawSerialOverscanBBox()
+                        D = bbox.getWidth()
+
+                    print(A,B,C,D)
                     newSplitContent[15] = str(A) # parallel prescan for phosim
                     newSplitContent[16] = B
                     newSplitContent[17] = str(C) # serial prescan for phosim
@@ -215,7 +280,7 @@ for sensorName in newSensorData.keys():
         
 # write the unchanged header, and the new content,
 # into a new segmentation.txt file 
-fname = "/project/scichris/aos/phosim_syseng4/data/comcam/segmentation_DM-29843.txt"
+fname = f"/project/scichris/aos/phosim_syseng4/data/comcam/segmentation_{ticket_number}.txt"
 f = open(fname, "w")
 f.writelines(headerLines)
 f.writelines(newContentLines)
