@@ -78,14 +78,14 @@ else:
     
 for sensorName in list(sensorData.keys()): # [:4] to test a few ... 
     #print('Running %s'%sensorName)
-    newName = up.getNewSensorName(sensorName)
+    newSensorName = up.getNewSensorName(sensorName)
     
     # get the lsstCam data for that sensor 
-    #print(newName)
-    lsstCamDetectors = camera.get(newName)
+    #print(newSensorName)
+    lsstCamDetectors = camera.get(newSensorName)
     
     # initialize a list for the new data 
-    newSensorData[newName] = []
+    newSensorData[newSensorName] = []
     
     for content in sensorData[sensorName]:
         splitContent = content.split() # by default splits by whitespace, omitting empty strings 
@@ -95,7 +95,7 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
         # 'R00_S12', '16', '4000', '4072'
         if len(content)<40:
             # update sensor name 
-            newSplitContent[0] = newName
+            newSplitContent[0] = newSensorName
             
             # update sensor px_x, px_y 
             bbox = lsstCamDetectors.getBBox()
@@ -108,7 +108,7 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
             old_px_x = splitContent[2]
             old_px_y = splitContent[3]
             #if old_px_x !=  str(px_x) : 
-                #print(sensorName, old_px_x, old_px_y,  '--> ', newName, px_x, px_y)
+                #print(sensorName, old_px_x, old_px_y,  '--> ', newSensorName, px_x, px_y)
             
         if len(content)>40:
             #continue
@@ -130,7 +130,7 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
                 ampName = 'C%s'%ch_map[ampName[1:]]
                 
             # for the main raft the amp names are correct 
-            newSensorAmpName = '%s_%s'%(newName, ampName)
+            newSensorAmpName = '%s_%s'%(newSensorName, ampName)
             newSplitContent[0] = newSensorAmpName
             
             #
@@ -143,12 +143,12 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
                     # update gain and readNoise 
                     newAmpGain = str(amp.getGain())
                     if amp.getGain() == 0:
-                        print(newName, ampName, amp.getGain())
+                        print(newSensorName, ampName, amp.getGain())
                     newAmpReadNoise = str(amp.getReadNoise()) 
                     #print('%s: gain %s --> %s, noise %s --> %s'%(ampName, ampGain, newAmpGain, 
                     #                                             ampReadNoise, newAmpReadNoise))
                     #if float(newAmpGain) > 2 :
-                        #print(newName)
+                        #print(newSensorName)
                         #print('   %s: gain %s --> %s, suspicious value '%(ampName, ampGain, newAmpGain))
                         
                     # replace the content values ... 
@@ -305,7 +305,7 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
         
         
         # add the new content line to the new dictionary 
-        newSensorData[newName].append(newContent)
+        newSensorData[newSensorName].append(newContent)
         
 # combine the new content as a long list of lines 
 newContentLines = []
