@@ -1,3 +1,4 @@
+import updatePhosimFunctions as up
 from lsst.obs.lsst import LsstCam
 import numpy as np 
 
@@ -51,6 +52,17 @@ camera = LsstCam().getCamera()
 # Update the data 
 newSensorData  = {}
   
+# CHANGE SERIAL?
+change_serial = True
+
+if change_serial:
+    print('Changing serial direction ')
+    ticket_number = 'DM-30367' # both: obs_lsst orientation
+else:
+    print('Keeping  original serial direction')
+    ticket_number = 'DM-28557' # lsstCam 
+    
+    
 for sensorName in list(sensorData.keys()): # [:4] to test a few ... 
     #print('Running %s'%sensorName)
     newName = up.getNewSensorName(sensorName)
@@ -197,6 +209,9 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
                         # update the value ...
                         newSplitContent[6] = parallelread
                     
+                    if change_serial: # multiply by -1 
+                        newSplitContent[5] = str(int(serialread) * -1)
+
                     # update the overscan / prescan values 
                     # preserving here phosim's rotation of 
                     # 90 degrees to the left wrt lsstCam ... 
@@ -250,7 +265,7 @@ for sensorName in newSensorData.keys():
         
 # write the unchanged header, and the new content,
 # into a new segmentation.txt file 
-fname = "/project/scichris/aos/phosim_syseng4/data/lsst/segmentation_DM-28553_.txt"
+fname = f"/project/scichris/aos/phosim_syseng4/data/lsst/segmentation_{ticket_number}.txt"
 f = open(fname, "w")
 f.writelines(headerLines)
 f.writelines(newContentLines)
