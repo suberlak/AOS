@@ -18,14 +18,18 @@ headerLines, contentLines = up.readFile('/project/scichris/aos/phosim_syseng4/da
 mapperSensors = list(camera.getNameMap().keys())
 
 # DEROTATE PHOSIM? 
-derotate_phosim = True
+derotate_phosim = False
+
+
+# UPDATE EULER ANGLE? 
+update_euler = False
 
 if derotate_phosim:
     print('Derotating phosim')
-    ticket_number= 'DM-30367' # both: obs_lsst orientation
+    ticket_number = 'DM-30367' # both: obs_lsst orientation
 else:
     print('Keeping phosim orientation')
-    ticket_number='DM-29264' # comcam 
+    ticket_number ='DM-29264' # comcam 
     
 # update the content 
 newContentLines = []
@@ -85,6 +89,12 @@ for line in contentLines:
         newSplitContent[4] = str(xnew)
         newSplitContent[5] = str(ynew)
 
+        # Update Euler angles 
+        if update_euler:
+            eulerAngle1 = float(splitContent[12])
+            newEulerAngle1 = eulerAngle1+90
+            newSplitContent[12] = str(newEulerAngle1)
+        
         # update the dx, dy - since we know the actual position, set these to 0 ...
         dx,dy,dz = float(splitContent[15]), float(splitContent[16]), float(splitContent[17])
         newSplitContent[15] = '0' # <-- set dx to 0 

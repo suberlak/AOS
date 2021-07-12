@@ -2,7 +2,15 @@ import updatePhosimFunctions as up
 from lsst.obs.lsst import LsstComCam
 import numpy as np 
 
-# read all the lines to a list : 
+# read all the lines to a list.
+# as a base for all changes is the copy of segmentation.txt from before I started 
+# to change anything that had to do with orientation,
+# i.e. as of v1.0.4 https://github.com/lsst-ts/phosim_syseng4/releases/tag/v1.0.4 
+
+# The geometry update for LSSTCam was https://github.com/lsst-ts/phosim_syseng4/releases/tag/v1.0.5
+# The geometry update for LSSTComCam was https://github.com/lsst-ts/phosim_syseng4/releases/tag/v1.0.6
+# Fix gain, variance for LSSTComCam https://github.com/lsst-ts/phosim_syseng4/releases/tag/v1.0.7 
+
 pathToFile = '/project/scichris/aos/phosim_syseng4/data/comcam/segmentation_old.txt'
 
 # read the content of segmentation.txt file
@@ -18,8 +26,14 @@ newSensorData  = {}
   
     
 # DEROTATE PHOSIM? 
-derotate_phosim = True
+derotate_phosim = False
 
+
+# CHANGE SERIAL?
+change_serial = True
+
+# REMAP CHANNELS?
+remap_channels = True 
 
 if derotate_phosim:
     print('Derotating phosim')
@@ -37,14 +51,14 @@ else:
 
 for sensorName in camera.getNameIter():
     print('Running %s'%sensorName)
-    newName = up.getNewSensorName(sensorName)
+    newSensorName = up.getNewSensorName(sensorName)
     
     # get the lsstComCam data for that sensor 
-    #print(newName)
-    lsstDetectors = camera.get(newName)
+    #print(newSensorName)
+    lsstDetectors = camera.get(newSensorName)
     
     # initialize a list for the new data 
-    newSensorData[newName] = []
+    newSensorData[newSensorName] = []
     
     for content in sensorData[sensorName]:
         splitContent = content.split() # by default splits by whitespace, omitting empty strings 
@@ -54,7 +68,7 @@ for sensorName in camera.getNameIter():
         # 'R00_S12', '16', '4000', '4072'
         if len(content)<40:
             # update sensor name 
-            newSplitContent[0] = newName
+            newSplitContent[0] = newSensorName
             
             # update sensor px_x, px_y 
             bbox = lsstDetectors.getBBox()
@@ -75,7 +89,7 @@ for sensorName in camera.getNameIter():
             #old_px_x = splitContent[2]
             #old_px_y = splitContent[3]
             #if old_px_x !=  str(px_x) : 
-                #print(sensorName, old_px_x, old_px_y,  '--> ', newName, px_x, px_y)
+                #print(sensorName, old_px_x, old_px_y,  '--> ', newSensorName, px_x, px_y)
             
         if len(content)>40:
             #continue
@@ -97,22 +111,28 @@ for sensorName in camera.getNameIter():
             
                 
             # for the main raft the amp names are correct 
-            newSensorAmpName = '%s_%s'%(newName, ampName)
+            #  below,  newSensorName is eg. R22_S02
+            # and ampName is eg. C02 
+            newSensorAmpName = '%s_%s'%(newSensorName, ampName)
             newSplitContent[0] = newSensorAmpName
             
             # read the mapper information for that sensor / amp ... 
+            # looping over the information in the mapper 
+            # this gets executed only once 
+            # i.e. once we find the amp.getName() which has 
+            # the same name as the amp in that content line 
             for amp in lsstDetectors:
                 if amp.getName() == ampName:
                     
                     # update gain and readNoise 
                     newAmpGain = str(amp.getGain())
                     if amp.getGain() == 0:
-                        print(newName, ampName, amp.getGain())
+                        print(newSensorName, ampName, amp.getGain())
                     newAmpReadNoise = str(amp.getReadNoise()) 
                     #print('%s: gain %s --> %s, noise %s --> %s'%(ampName, ampGain, newAmpGain, 
                     #                                             ampReadNoise, newAmpReadNoise))
                     #if float(newAmpGain) > 2 :
-                        #print(newName)
+                        #print(newSensorName)
                         #print('   %s: gain %s --> %s, suspicious value '%(ampName, ampGain, newAmpGain))
                         
                     # replace the content values ... 
@@ -182,10 +202,13 @@ for sensorName in camera.getNameIter():
                     # for E2V, serialread is -1 when parallelread is -1 
                     serialread = splitContent[5]
                     parallelread = splitContent[6]
-                    
+                    if change_serial:
+                        serialread = '-1'
+                        newSplitContent[5] = serialread
+                        
                     if lsstDetectors.getPhysicalType() == 'E2V':
-                        #print('%s is E2V'%newSensorAmpName)
-                        #print('%s %s'%(serialread, parallelread))
+                        print('%s is E2V'%newSensorAmpName)
+                        print('%s %s'%(serialread, parallelread))
                         if parallelread == '-1':
                             serialread = '-1'
                             #print('--> %s %s'%(serialread, parallelread))
@@ -257,12 +280,45 @@ for sensorName in camera.getNameIter():
                         bbox = amp.getRawSerialOverscanBBox()
                         D = bbox.getWidth()
 
-                    print(A,B,C,D)
+                    #print(A,B,C,D)
                     newSplitContent[15] = str(A) # parallel prescan for phosim
-                    newSplitContent[16] = B
+                    newSplitContent[16] = str(B)
                     newSplitContent[17] = str(C) # serial prescan for phosim
                     newSplitContent[18] = str(D) # parallel overscan for phosim 
                     
+                    
+                    
+                
+            if remap_channels: 
+                # change names from 17,16.. to 10,11.. 
+                # and 07,06... to 00, 01 ... ,
+                # which amounts to flipping along x-axis 
+
+                mapping_dict = {# top row
+                               'C00':'C07',
+                               'C01':'C06',
+                               'C02':'C05',
+                               'C03':'C04',
+                               'C04':'C03',
+                               'C05':'C02',
+                               'C06':'C01',
+                               'C07':'C00',
+                                # bottom row 
+                               'C10':'C17',
+                               'C11':'C16',
+                               'C12':'C15',
+                               'C13':'C14',
+                               'C14':'C13',
+                               'C15':'C12',
+                               'C16':'C11',
+                               'C17':'C10'
+                               }
+                newAmpName = mapping_dict[ampName]
+                print(f'Changing {ampName} to {newAmpName}')
+                newSensorAmpName = '%s_%s'%(newSensorName, newAmpName)
+                newSplitContent[0] = newSensorAmpName
+
+                        
         # either way, make new content by joining the elements of 
         # the updated split content: 
         newContent = ' '.join(newSplitContent)+'\n'
@@ -270,7 +326,7 @@ for sensorName in camera.getNameIter():
         
         
         # add the new content line to the new dictionary 
-        newSensorData[newName].append(newContent)
+        newSensorData[newSensorName].append(newContent)
         
 # combine the new content as a long list of lines 
 newContentLines = []
