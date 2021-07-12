@@ -55,12 +55,25 @@ newSensorData  = {}
 # CHANGE SERIAL?
 change_serial = True
 
-if change_serial:
+# REMAP CHANNELS?
+remap_channels = True 
+
+
+# the default:
+ticket_number = 'DM-28557' # lsstCam 
+    
+    
+if change_serial :
     print('Changing serial direction ')
     ticket_number = 'DM-30367' # both: obs_lsst orientation
 else:
     print('Keeping  original serial direction')
-    ticket_number = 'DM-28557' # lsstCam 
+    
+if remap_channels:
+    print('Remapping channel names')
+    ticket_number = 'DM-30367' # both: obs_lsst orientation
+else:
+    print('Keeping original amp channel names ')
     
     
 for sensorName in list(sensorData.keys()): # [:4] to test a few ... 
@@ -119,6 +132,10 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
             # for the main raft the amp names are correct 
             newSensorAmpName = '%s_%s'%(newName, ampName)
             newSplitContent[0] = newSensorAmpName
+            
+            #
+            # begin loop lsstCam mapper amp info 
+            #
             # read the lsstCam information for that sensor / amp ... 
             for amp in lsstCamDetectors:
                 if amp.getName() == ampName:
@@ -247,7 +264,40 @@ for sensorName in list(sensorData.keys()): # [:4] to test a few ...
                     newSplitContent[16] = '0'
                     newSplitContent[17] = str(C) # serial prescan for phosim
                     newSplitContent[18] = str(D) # parallel overscan for phosim 
-                    
+            #
+            # end loop lsstCam mapper amp info 
+            #
+            
+            if remap_channels: 
+            # change names from 17,16.. to 10,11.. 
+            # and 07,06... to 00, 01 ... ,
+            # which amounts to flipping along x-axis 
+
+                mapping_dict = {# top row
+                               'C00':'C07',
+                               'C01':'C06',
+                               'C02':'C05',
+                               'C03':'C04',
+                               'C04':'C03',
+                               'C05':'C02',
+                               'C06':'C01',
+                               'C07':'C00',
+                                # bottom row 
+                               'C10':'C17',
+                               'C11':'C16',
+                               'C12':'C15',
+                               'C13':'C14',
+                               'C14':'C13',
+                               'C15':'C12',
+                               'C16':'C11',
+                               'C17':'C10'
+                               }
+                newAmpName = mapping_dict[ampName]
+                print(f'Changing {ampName} to {newAmpName}')
+                newSensorAmpName = '%s_%s'%(newSensorName, newAmpName)
+                newSplitContent[0] = newSensorAmpName
+
+                
         # either way, make new content by joining the elements of 
         # the updated split content: 
         newContent = ' '.join(newSplitContent)+'\n'
