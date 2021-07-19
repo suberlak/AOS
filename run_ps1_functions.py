@@ -77,6 +77,17 @@ def calculate_obshistid(instrument, field, position, cmd_file, run):
 def invert_obshistid(obshistid):
     ''' Given obshistid, invert the logic and find the 
     instrument, field, position, cmd_file, run
+    
+    Parameters:
+    -----------
+    obshistid: str
+         The obs hist id, eg. "9020031"
+        
+    Returns:
+    --------
+    inverted_dict:  dic
+         A dictionary containing keys that resolve the obshistid:
+         instrument, field, position, cmd, run
     '''
     instDictInv = invert_dict(get_inst_dict())
     fieldDictInv = invert_dict(get_field_dict())
