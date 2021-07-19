@@ -69,7 +69,7 @@ def main(
                 #new_inst_file = inst_file[: -(len(".inst"))] + f"_{obshistid}.inst"
                 #inst_file_path = os.path.join(root_dir, new_inst_file)
 
-                if instrument == "lsstCam":
+                if (instrument == "lsstCam") or (instrument == "wfs"):
                     instr = "lsst"
                 elif instrument == "comCam":
                     instr = "comcam"
@@ -203,7 +203,7 @@ Note that there should be M*N cores available. (default: 25)",
     parser.add_argument(
         "--cmd_file",
         type=str,
-        default="noBkgnd.cmd",
+        default="noBkgndPert00.cmd",
         help="Name of the physics command file used by phosim (default: noBkgnd.cmd)",
     )
 

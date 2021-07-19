@@ -132,3 +132,41 @@ def get_field_ra_dec():
                                   "dec": gt["dec_deg"][i]
                                   }
     return gt_dict
+
+
+def write_phosim_header(
+    output,
+    ra,
+    dec,
+    camconfig=3,
+    opsim_filter=3,
+    mjd=59580.0,
+    exposure=0.25,
+    obsid=9006002,
+    position='focal',
+    seeing=0.69
+):
+    """Write to file handle the phosim header"""
+    output.write("Opsim_obshistid {}\n".format(obsid))
+    output.write("Opsim_filter {}\n".format(opsim_filter))
+    output.write("mjd {}\n".format(mjd))
+    output.write("SIM_SEED {}\n".format(1000))
+    output.write("rightascension {}\n".format(ra))
+    output.write("declination {}\n".format(dec))
+    output.write("rotskypos {}\n".format(0.000000))
+    output.write("rottelpos {}\n".format(0))
+    output.write("SIM_VISTIME {}\n".format(exposure))
+    output.write("SIM_NSNAP {}\n".format(1))
+    output.write("moonphase {}\n".format(0.0))
+    output.write("moonalt {}\n".format(-90))
+    output.write("sunalt {}\n".format(-90))
+    output.write("Opsim_rawseeing {}\n".format(seeing))
+    if position == 'extra':
+        output.write("move 10 -1500.0000\n")  # write the defocal movement
+    elif position == 'intra':
+        output.write("move 10  1500.0000\n")  
+    output.write("camconfig {}\n".format(camconfig))
+    
+    
+
+    

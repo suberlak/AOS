@@ -129,6 +129,9 @@ def get_wfs_sensor_names_xy():
 
 
 def get_opd_ra_dec(instrument, raField, decField, rotskypos):
+    ''' Provide phoSim with ra,dec locations to evaluate OPD.
+    The OPD expects field location, not sky location.
+    '''
     if instrument == 'comCam':
         sensorNames, xCenter, yCenter = get_all_sensor_names_xy(LsstComCam().getCamera())
 
