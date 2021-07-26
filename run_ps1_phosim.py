@@ -323,6 +323,6 @@ are the same (default: 1).",
         dry_run=args.dry_run,
         opd=args.opd,
         split = args.split,
-        group_number=args.group_number,
+        group_number=int(args.group_number[0]),
         select_group = int(args.select_group[0])
     )
