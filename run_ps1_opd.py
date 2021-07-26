@@ -46,9 +46,8 @@ def write_opd_inst_file(
     panda_cat,
     ra,
     dec,
-    phosim_file="opd.inst",
+    inst_path=os.path.join("./","opd.inst"),
     passband="r",
-    out_dir="./",
     camconfig=3,
     exposure=15,
     obsid=9006002,
@@ -68,7 +67,7 @@ def write_opd_inst_file(
         "y": "ymeanpsfmag",
     }
 
-    out_file = os.path.join(out_dir, phosim_file)
+    out_file = inst_path
 
     filterid = list(passbands.keys()).index(passband)
     if magcol is None:
@@ -100,6 +99,7 @@ def get_all_sensor_names_xy(camera):
     sensorNames = []
     xCenter, yCenter = [], []
     for detector in camera:
+        
         bbox = detector.getBBox()
         xCen, yCen = bbox.centerX, bbox.centerY
         xCenter.append(xCen)
@@ -141,7 +141,7 @@ def get_opd_ra_dec(instrument, raField, decField, rotskypos):
     elif instrument == 'wfs':
         sensorNames, xCenter, yCenter = get_wfs_sensor_names_xy()
 
-     # Declare the SkySim()
+    # Declare the SkySim()
     skySim = SkySim()
     
     # Set the observation information
@@ -220,12 +220,12 @@ def main(
                         obshistid = func.calculate_obshistid(instrument, field, position, cmd_file, run)
                         opd_fname = f'opd_{instrument}_{field}_{position}_{obshistid}.inst'
                         print(opd_fname)
-                        opd_fpath = os.path.join(root_dir, opd_fname)
+                        inst_path = os.path.join(root_dir, opd_fname)
                         
                         if not dry_run:
                             panda_cat = get_opd_ra_dec(instrument, raField=0, decField=0,rotskypos=0)
                             write_opd_inst_file(panda_cat, raField, decField,
-                                phosim_file=opd_fpath, passband="r", out_dir="./", camconfig=3,
+                                inst_path, passband="r", camconfig=3,
                                 exposure=exposure, obsid=obshistid, position=position, mjd=59580,
                                 magcol=None)
 
