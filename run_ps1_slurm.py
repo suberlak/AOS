@@ -5,35 +5,54 @@ import run_ps1_functions as func
 
 
 def write_slurm_script(
-    python_script,
-    instrument,
-    field,
-    position,
-    phosim_p,
-    cmd_file,
-    root_dir,
+    cmd,
     nodes,
     ntasks,
     job_name,
     slurm_file_name,
     slurm_path,
     time_limit,
+    ntasks_per_node,
+    location
 ):
 
-    cmd = f"python {python_script} --instruments {instrument} --fields {field} \
-    --positions {position} --phosim_p {phosim_p} --cmd_file {cmd_file} --root_dir {root_dir} \n"
-
-    content = [
-        "#!/bin/bash -l \n",
-        "#SBATCH --partition normal \n" f"#SBATCH --nodes {nodes} \n",
-        f"#SBATCH --ntasks {ntasks} \n",
-        f"#SBATCH -t {time_limit}:00:00 \n",
-        f"#SBATCH --job-name {job_name} \n",
-        'echo "starting at `date` on `hostname`" \n',
-        "pwd \n",
-        cmd,
-        'echo "ended at `date` on `hostname`" \n',
-    ]
+    
+    
+    if location == 'NCSA':
+        content = [
+            "#!/bin/bash -l \n",
+            "#SBATCH --partition normal \n",
+            f"#SBATCH --nodes {nodes} \n",
+            f"#SBATCH --ntasks {ntasks} \n",
+            f"#SBATCH -t {time_limit}:00:00 \n",
+            f"#SBATCH --job-name {job_name} \n",
+            'echo "starting at `date` on `hostname`" \n',
+            "pwd \n",
+            cmd,
+            '\n echo "ended at `date` on `hostname`" \n',
+        ]
+    if location == 'hyak':
+        content = [
+             "#!/bin/bash -l \n",
+             "#SBATCH --partition astro \n",
+             f"#SBATCH --nodes {nodes} \n",
+             f"#SBATCH --ntasks-per-node {ntasks_per_node} \n"
+             f"#SBATCH -t {time_limit}:00:00 \n",
+             f"#SBATCH --job-name {job_name} \n",
+             "#SBATCH --mem=246G \n",
+           # "##turn on e-mail notification"
+            "#SBATCH --mail-type=ALL \n",
+            "#SBATCH --mail-user=suberlak@uw.edu \n",
+            "#SBATCH --export=all \n",
+            "\n",
+            'echo "starting at `date` on `hostname`" \n',
+            "pwd \n",
+            cmd,
+            "\n",
+            'echo "ended at `date` on `hostname`" \n',
+            
+        ]
+        
     out_file = os.path.join(slurm_path, slurm_file_name)
     func.write_to_file(out_file, content)
 
@@ -55,6 +74,7 @@ def main(
     suffix,
     python_script,
     root_dir,
+    phosim_path,
     nodes,
     ntasks,
     dry_run,
@@ -62,6 +82,9 @@ def main(
     slurm_file,
     slurm_path,
     time_limit,
+    ntasks_per_node,
+    split,
+    group_number
 ):
 
     counter = 0
@@ -70,32 +93,47 @@ def main(
             for bkgnd in backgrounds:
                 for pert in perts:
                     for position in positions:
-                        print(f"\n{instrument} {field} {bkgnd} {pert} {position}")
-                        cmd_file = f"{bkgnd}BkgndPert{pert}_{suffix}.cmd"
-                        print(f"cmd_file:{cmd_file}")
-                        job_name = f"{job_prefix}{counter}"  # eg. comHi12
-                        print(f"job_name:{job_name}")
-                        #  eg. runSlurmComHi12.sl
-                        slurm_file_name = f"{slurm_file}{job_name}.sl"
-                        print(f"slurm_file_name:{slurm_file_name}")
-                        slurm_file_path = write_slurm_script(
-                            python_script=python_script,
-                            instrument=instrument,
-                            field=field,
-                            position=position,
-                            phosim_p=phosim_p,
-                            cmd_file=cmd_file,
-                            root_dir=root_dir,
-                            nodes=nodes,
-                            ntasks=ntasks,
-                            job_name=job_name,
-                            slurm_file_name=slurm_file_name,
-                            slurm_path=slurm_path,
-                            time_limit=time_limit,
-                        )
-                        if not dry_run:
-                            submit_slurm_job(slurm_file_path)
-                        counter += 1
+                        for select_group in range(group_number):
+                            select_group += 1
+                            print(f"\n{instrument} {field} {bkgnd} {pert} {position} {select_group}")
+
+                            cmd_file = f"{bkgnd}BkgndPert{pert}_{suffix}.cmd"
+                            print(f"cmd_file:{cmd_file}")
+
+                            job_name = f"{job_prefix}{counter}"  # eg. comHi12
+                            print(f"job_name:{job_name}")
+
+                            #  eg. runSlurmComHi12.sl
+                            slurm_file_name = f"{slurm_file}{job_name}.sl"
+                            print(f"slurm_file_name:{slurm_file_name}")
+
+                            # make the command 
+                            cmd = f"python {python_script} --instruments {instrument} --fields {field} \
+        --positions {position} --phosim_p {phosim_p} --cmd_file {cmd_file} --root_dir {root_dir}  \
+        --phosim_path {phosim_path}" 
+
+                            if split:
+                                cmd += " --split "
+                                cmd += f" --group_number {group_number} "
+                                cmd += f" --select_group {select_group} "
+                            else:
+                                cmd += " \n"
+
+                        
+                            slurm_file_path = write_slurm_script(
+                                cmd=cmd,
+                                nodes=nodes,
+                                ntasks=ntasks,
+                                job_name=job_name,
+                                slurm_file_name=slurm_file_name,
+                                slurm_path=slurm_path,
+                                time_limit=time_limit,
+                                ntasks_per_node=ntasks_per_node,
+                                location=suffix
+                            )
+                            if not dry_run:
+                                submit_slurm_job(slurm_file_path)
+                            counter += 1
 
 
 if __name__ == "__main__":
@@ -166,6 +204,24 @@ Note that there should be M*N cores available, so here \
 phosim_p <= nodes * ntasks, eg. if nodes=1,\
 ntasks=24, phosim_p <= 24 (default: 24)",
     )
+    parser.add_argument(
+    "--split",
+    default=False,
+    action='store_true',
+    help='A flag whether to split all sensors for a given camera into groups. \
+    That way each group is submitted separately to phosim, and then repackaged. \
+    For lsstCam, there are 205 sensors. Related kwargs: group_number , select_group')
+    
+    parser.add_argument(
+        "--group_number",
+        nargs=1,
+        type=int,
+        default=5,
+        help="If split is True,  into how many groups split the sensors ? (default: 5, \
+        splitting 205 lsstCam sensors into 5 groups of 41 sensors each).",
+    )
+    
+        
 
     parser.add_argument(
         "--root_dir",
@@ -177,6 +233,16 @@ under  {instrument}{field}{position}{obshistid}\
 will be written",
     )
     parser.add_argument(
+        "--phosim_path",
+        type=str,
+        default="/project/scichris/aos/phosim_syseng4/phosim.py",
+        help="Absolute path to phosim.py. (default: /project/scichris/aos/phosim_syseng4/phosim.py)",
+    )
+
+        
+    
+    
+    parser.add_argument(
         "--nodes",
         nargs=1,
         default=[1],
@@ -186,15 +252,24 @@ will be written",
         "--ntasks",
         nargs=1,
         default=[24],
-        help="Number of tasks per node, usually one task per CPU, \
+        help="Number of tasks (total) usually one task per CPU, \
 parsed as #SBATCH --ntasks {ntasks}, so \
+eg. ntasks=24 with 24 CPU node, and ntasks=48 with 2*24 CPU nodes (default:24).",
+    )
+    parser.add_argument(
+        "--ntasks_per_node",
+        nargs=1,
+        default=[24],
+        help="Number of tasks per node, usually one task per CPU, \
+parsed as #SBATCH --ntasks_per_node {ntasks_per_node}, so \
 eg. ntasks=24 with 24 CPU node (default:24).",
     )
+    
 
     parser.add_argument(
         "--time_limit",
-        type=int,
-        default=300,
+        nargs=1,
+        default=[300],
         help="Time limit for the job (hours), \
 parsed as #SBATCH -t {time_limit}:00:00 {default:300}",
     )
@@ -237,13 +312,17 @@ write the slurm jobs and print the arguments parsed (default: False)",
         backgrounds=args.backgrounds,
         perts=args.perts,
         suffix=args.suffix,
+        split = args.split,
+        group_number=args.group_number,
         python_script=args.python_script,
         root_dir=args.root_dir,
+        phosim_path=args.phosim_path,
         nodes=args.nodes[0],
         ntasks=args.ntasks[0],
         job_prefix=args.job_prefix,
         slurm_file=args.slurm_file,
         slurm_path=args.slurm_path,
         dry_run=args.dry_run,
-        time_limit=args.time_limit,
+        time_limit=args.time_limit[0],
+        ntasks_per_node=args.ntasks_per_node[0]
     )
