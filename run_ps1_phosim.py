@@ -2,6 +2,7 @@ import subprocess
 import os
 import argparse
 import time
+import numpy as np
 import run_ps1_functions as func
 
 def write_readme(
@@ -39,7 +40,10 @@ def main(
     root_dir,
     run,
     dry_run,
-    opd
+    opd,
+    split,
+    group_number,
+    select_group
 ):
 
     for instrument in instruments:
@@ -78,28 +82,60 @@ def main(
                 work_dir = os.path.join(
                     root_dir, instrument, field, position, str(obshistid)
                 )
-                if not opd:
-                    out_dir = os.path.join(work_dir, "raw")
-                else:
+                
+                # the default raw dir 
+                raw_dir = "raw"
+                
+                # if splitting into groups, put each sensor group 
+                # into a separate raw directory, so that 
+                # they could be run simultaneously 
+                if split:
+                    raw_dir += str(select_group)
+                    
+                # by default, the output dir is /raw/
+                out_dir = os.path.join(work_dir, raw_dir)
+                    
+                #  unless we are evaluating the opd or something else... 
+                if opd:
                     out_dir = os.path.join(work_dir, "opd")
                     
                 if not dry_run:
                     if not os.path.exists(out_dir):
                         os.makedirs(out_dir)
-                if not opd:
-                    log_file = os.path.join(work_dir, "starPhoSim.log")
-                else:
+                
+                
+                log_name = 'starPhoSim'
+                if split:
+                    log_name += str(select_group)
+                    
+                log_file = os.path.join(work_dir, f"{log_name}.log")
+                
+                if opd:
                     log_file = os.path.join(work_dir, "opdPhoSim.log")
 
                 # run phosim: beginning of the command
                 command = f"python {phosim_path} {inst_file_path} -i {instr} -e 1 \
     -c {cmd_file_path} -w {out_dir} -p {phosim_p}  -o {out_dir} "
 
+                # split all sensors for a given instrument into groups,
+                # add as -s argument to phosim.py 
+                if split:
+                    if len(phosim_s[0]) > 0:
+                        print(' Both phosim_s and split are submitted. \
+                        Note that split supersedes the content of phosim_s argument.')
+                    sorted_sensors = func.get_camera_sensors(instrument)
+                    sensor_groups = np.array_split(sorted_sensors, group_number)
+                    print(f'Selected sensor group {select_group} of {group_number}')
+                    # need to go from 1,2,3... to 0,1,2 index 
+                    phosim_s = sensor_groups[select_group-1]
+                    
                 # add sensor selection
                 if len(phosim_s[0]) > 0:
                     sensor_names = func.sensor_list_to_string(phosim_s)
                     command += f' -s "{sensor_names}"'
-
+                    
+                    
+                    
                 # end of the command
                 command += f"> {log_file} 2>&1"
                 phosim_command = command
@@ -130,9 +166,9 @@ def main(
                     
                 # store names of all files used by phosim to README file
                 # for good bookkeeping
-                if not opd:
-                    filename='README.txt'
-                else:
+                filename=f'README{select_group}.txt'
+  
+                if opd:
                     filename='README_OPD.txt'
                     
                 if not dry_run:
@@ -247,6 +283,32 @@ are the same (default: 1).",
         instrument, field, position, cmd_file (default: False)",
     )
     
+    parser.add_argument(
+    "--split",
+    default=False,
+    action='store_true',
+    help='A flag whether to split all sensors for a given camera into groups. \
+    That way each group is submitted separately to phosim, and then repackaged. \
+    For lsstCam, there are 205 sensors. Related kwargs: group_number , select_group')
+    
+    parser.add_argument(
+        "--group_number",
+        nargs=1,
+        type=int,
+        default=5,
+        help="If split is True,  into how many groups split the sensors ? (default: 5, \
+        splitting 205 lsstCam sensors into 5 groups of 41 sensors each).",
+    )
+    
+    parser.add_argument(
+        "--select_group",
+        nargs=1,
+        type=int,
+        default=1,
+        help="Which group of the group_number to run? (default:1).",
+    )
+        
+        
     args = parser.parse_args()
     main(
         instruments=args.instruments,
@@ -260,5 +322,8 @@ are the same (default: 1).",
         root_dir=args.root_dir,
         run=args.run,
         dry_run=args.dry_run,
-        opd=args.opd
+        opd=args.opd,
+        split = args.split,
+        group_number=args.group_number,
+        select_group = args.select_group
     )
