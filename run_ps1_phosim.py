@@ -303,8 +303,7 @@ are the same (default: 1).",
     parser.add_argument(
         "--select_group",
         nargs=1,
-        type=int,
-        default=1,
+        default=[1],
         help="Which group of the group_number to run? (default:1).",
     )
         
@@ -325,5 +324,5 @@ are the same (default: 1).",
         opd=args.opd,
         split = args.split,
         group_number=args.group_number,
-        select_group = args.select_group
+        select_group = int(args.select_group[0])
     )
