@@ -294,8 +294,7 @@ are the same (default: 1).",
     parser.add_argument(
         "--group_number",
         nargs=1,
-        type=int,
-        default=5,
+        default=[5],
         help="If split is True,  into how many groups split the sensors ? (default: 5, \
         splitting 205 lsstCam sensors into 5 groups of 41 sensors each).",
     )
