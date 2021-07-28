@@ -37,6 +37,101 @@ def write_to_file(out_file, content):
         for line in content:
             output.write(line)
             
+
+def readFile(pathToFile, headerString = '#'):
+    ''' Read file line-by-line  as two lists,
+    one containing the header lines, 
+    the other the content lines 
+    
+    Parameters:
+    -----------
+    pathToFile: `str`
+        absolute path to file 
+        
+    Returns:
+    ----------
+    `list`, `list` 
+        lists containing the header lines 
+        and the content lines 
+    '''
+    with open(pathToFile) as f:
+        allLines = f.readlines()
+
+    headerLines=[]
+    contentLines=[]
+
+    # store the header part and content separately 
+    for line in allLines:
+        if line.startswith('#'):
+            headerLines.append(line)
+        else:
+            contentLines.append(line)
+
+    return headerLines, contentLines 
+
+
+def update_cmd_mirror_paths(bkgnd, pert, cmd_dir, mirror_dir):
+      
+    cmd_file = f'{bkgnd}BkgndPert{pert}.cmd'
+
+    path_to_cmd = os.path.join(cmd_dir, cmd_file)
+    surfacemap_dir = os.path.join(f'imgCloseLoop_0-{pert}','pert','iter0')
+
+    header, content = readFile(path_to_cmd)  
+    #print(content)
+
+    new_content = content.copy()
+    for i in range(len(content)):
+        line = content[i]
+        newline = line
+        if line.startswith('surfacemap'):
+            print(line) 
+            # split the original line 
+            splitline = line.split()
+            mirror_file = splitline[2].split('/')[-1]
+            path_to_mirror = os.path.join(mirror_dir, surfacemap_dir, mirror_file)
+            #print(path_to_mirror)
+            # replace that with a new line with an  updated path 
+            newSplitLine = splitline[:2] # "eg. surfacemap 0"
+            # eg. /project/scichris/aos/AOS/DM-28360/imgCloseLoop_0-00/iter0/pert/M1res.txt
+            #print(newSplitLine)
+            newSplitLine.append(path_to_mirror)
+            newSplitLine.append(splitline[-1]) # eg. 1
+            newline = ' '.join(newSplitLine)
+            newline += ' \n'
+            print('-->', newline)
+        new_content[i] = newline
+    
+    return new_content
+        
+        
+def update_inst_file_obshistid(obshistid, inst_file,  root_dir, seeing=0.69):
+    
+    path_to_inst_file = os.path.join(root_dir, inst_file)
+
+    header, content = readFile(path_to_inst_file)
+    new_content = content.copy()
+    for i in range(len(content)):
+        # first update obshistid
+        if content[i].find('obshistid')>0:
+            split_line = content[i].split(' ')
+            split_line[1] = f'{obshistid}\n'
+            new_content[i] = ' '.join(split_line)
+            
+        # second update the seeing 
+        if content[i].find('rawseeing')>0:
+            split_line = content[i].split(' ')
+            split_line[1] = f'{seeing}\n'
+            new_content[i] = ' '.join(split_line)
+            
+            continue
+            
+    new_inst_file = inst_file[:-(len('.inst'))]+f'_{obshistid}.inst'
+    out_file = os.path.join(root_dir, new_inst_file)
+    write_to_file(out_file, new_content)
+    print(f'Updated {inst_file} to {new_inst_file} in {root_dir}')
+
+    
             
 def invert_dict(dic):
     invDic = {}
