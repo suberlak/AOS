@@ -75,7 +75,7 @@ def update_cmd_mirror_paths(bkgnd, pert, cmd_dir, mirror_dir):
     cmd_file = f'{bkgnd}BkgndPert{pert}.cmd'
 
     path_to_cmd = os.path.join(cmd_dir, cmd_file)
-    surfacemap_dir = os.path.join(f'imgCloseLoop_0-{pert}','pert','iter0')
+    surfacemap_dir = os.path.join(f'imgCloseLoop_0-{pert}','iter0','pert')
 
     header, content = readFile(path_to_cmd)  
     #print(content)
