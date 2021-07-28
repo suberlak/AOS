@@ -38,7 +38,7 @@ izernike 0 24 1.7382040828760413e-09
 izernike 0 25 -4.871324577862937e-08 
 izernike 0 26 5.130762089063919e-10 
 izernike 0 27 8.089045134832733e-08 
-surfacemap 0 /gscratch/astro/suberlak/aos/AOS/DM-28360/imgCloseLoop_0-00/pert/iter0/M1res.txt 1 
+surfacemap 0 /gscratch/astro/suberlak/aos/AOS/DM-28360/imgCloseLoop_0-00/iter0/pert/M1res.txt 1 
 izernike 2 0 -4.0442156930541306e-05 
 izernike 2 1 -4.332919031597056e-05 
 izernike 2 2 9.573003193790922e-05 
@@ -67,7 +67,7 @@ izernike 2 24 1.7382040828760413e-09
 izernike 2 25 -4.871324577862937e-08 
 izernike 2 26 5.130762089063919e-10 
 izernike 2 27 8.089045134832733e-08 
-surfacemap 2 /gscratch/astro/suberlak/aos/AOS/DM-28360/imgCloseLoop_0-00/pert/iter0/M3res.txt 1 
+surfacemap 2 /gscratch/astro/suberlak/aos/AOS/DM-28360/imgCloseLoop_0-00/iter0/pert/M3res.txt 1 
 surfacelink 2 0 
 izernike 1 0 -1.267773851621322e-06 
 izernike 1 1 6.163160147856784e-11 
@@ -97,7 +97,7 @@ izernike 1 24 -1.9668959737808478e-12
 izernike 1 25 -5.456541018803041e-09 
 izernike 1 26 -8.08497969454281e-13 
 izernike 1 27 1.1701927697912578e-08 
-surfacemap 1 /gscratch/astro/suberlak/aos/AOS/DM-28360/imgCloseLoop_0-00/pert/iter0/M2res.txt 1 
+surfacemap 1 /gscratch/astro/suberlak/aos/AOS/DM-28360/imgCloseLoop_0-00/iter0/pert/M2res.txt 1 
 izernike 3 0 -0.12237724288672729 
 izernike 3 1 -0.0016546487428090778 
 izernike 3 2 -0.005384904903874816 
