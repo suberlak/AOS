@@ -20,6 +20,76 @@ import lsst.geom
 # run_ps1_slurm
 
 
+from lsst.obs.base import createInitialSkyWcsFromBoresight
+from lsst.afw.cameraGeom import FOCAL_PLANE, PIXELS
+import lsst.obs.lsst as obs_lsst
+import lsst.geom
+
+
+def ccd_xy_to_radec(x_px=[0], y_px=[0], boresight_ra=0, boresight_dec=0, rotskypos=0,
+                     sensorNameList = ['R22_S11']):
+    # Use the actual elements of SkySim and WcsSol , so 
+    # it's more transparent  how CCD coordinates get translated into Ra, Deg catalog 
+
+    rotSkyPos=rotskypos
+    # get all sensors from the LsstCam : 
+    camera = obs_lsst.lsstCamMapper.LsstCamMapper().camera
+
+    #setObsMetaData in bsc/WcsSol.py 
+    boresightPointing = lsst.geom.SpherePoint(boresight_ra, 
+                                              boresight_dec, 
+                                              lsst.geom.degrees)
+    centerCcd= "R22_S11"
+    skyWcs = createInitialSkyWcsFromBoresight(
+                boresightPointing,
+                (90-rotSkyPos) * lsst.geom.degrees,
+                camera[centerCcd],
+                flipX=False,
+            )
+
+    # Get the pixel positions in DM team
+    # pixelDmX, pixelDmY = self._sourProc.camXY2DmXY(xInpixelInCam, yInPixelInCam)
+    # transpose - from DVCS to CCS 
+    xInPixelInCam = x_px
+    yInPixelInCam = y_px
+    pixelDmX, pixelDmY = yInPixelInCam,  xInPixelInCam
+
+
+    raList = []
+    decList = []
+    xPxList = []
+    yPxList = []
+    centerChip = camera[centerCcd]
+    for sensorName in  sensorNameList:
+        # same sensorName for each pixel in the list 
+        chipNames =[sensorName for x in range(len(x_px))]
+        for chipX, chipY, ccdX, ccdY, chipName in zip(pixelDmX, 
+                                                      pixelDmY, 
+                                                      xInPixelInCam,
+                                                      yInPixelInCam,
+                                                      chipNames
+                                                     ):
+            #print(chipX,chipY,chipName, raPt,decPt)
+            cameraChip = camera[chipName]
+            # Get x,y on specified detector in terms of mm from center of cam
+            camXyMm = cameraChip.transform(
+                lsst.geom.Point2D(chipX, chipY), PIXELS, FOCAL_PLANE
+            )
+            # Convert mm to pixels
+            camPoint = centerChip.transform(camXyMm, FOCAL_PLANE, PIXELS)
+
+            # Calculate correct ra, dec
+            raPt, decPt = skyWcs.pixelToSky(camPoint)
+
+            raList.append(raPt.asDegrees())
+            decList.append(decPt.asDegrees())
+            xPxList.append(ccdX)
+            yPxList.append(ccdY)
+
+    raInDeg, declInDeg =  np.array([raList, decList])
+    
+    return raInDeg, declInDeg , xPxList, yPxList
+
 
 def pixel_L(xmin=500,ymin=200,width=800,height=1200,xspacing=220,yspacing=200):
     xmax = xmin+width
