@@ -20,6 +20,127 @@ import lsst.geom
 # run_ps1_slurm
 
 
+
+def pixel_L(xmin=500,ymin=200,width=800,height=1200,xspacing=220,yspacing=200):
+    xmax = xmin+width
+    ymax = ymin+height
+    
+    # initialize array storing coords for all pixels 
+    xPx = np.zeros(0)
+    yPx = np.zeros(0)
+
+    # bott horizontal line
+    x_bot = np.arange(xmin,xmax,xspacing)
+    y_bot = np.ones_like(x_bot)*ymin
+    xPx = np.append(xPx, x_bot)
+    yPx = np.append(yPx, y_bot)
+
+    # vertical line
+    y_vert = np.arange(ymin+200,ymax-100,yspacing)
+    x_vert = np.ones_like(y_vert)*xmin
+    xPx = np.append(xPx, x_vert)
+    yPx = np.append(yPx, y_vert)
+
+    return xPx, yPx
+
+def pixel_S(x0=0,y0=0):
+    xPx = np.array([1000,
+                    900,
+                    750,
+                    550,
+                    350,
+                    250,
+                    200,
+                    300,
+                    500,
+                    750,
+                    900,
+                    1000,
+                    900,
+                   700,
+                   500,
+                   340,
+                  205,
+                   ]
+                  )
+    yPx = np.array([1750,
+                   1900,
+                   2000,
+                   2000,
+                   1900,
+                   1750,
+                   1500,
+                   1250,
+                   1100,
+                   1000,
+                   850,
+                   600,
+                   350,
+                   215,
+                   125,
+                   185,
+                   305,
+                   ])
+    xPx += x0
+    return xPx, yPx
+
+
+
+def pixel_T(xmin=500,ymin=200,width=800,height=1200,xspacing=220,yspacing=200):
+    xmax = xmin+width
+    ymax = ymin+height-200
+    
+    # initialize array storing coords for all pixels 
+    xPx = np.zeros(0)
+    yPx = np.zeros(0)
+
+    # top horizontal line
+    x_top = np.arange(xmin,xmax,xspacing)
+    y_top = np.ones_like(x_top)*ymax
+    xPx = np.append(xPx, x_top)
+    yPx = np.append(yPx, y_top)
+
+    # vertical line
+    y_vert = np.arange(ymin,ymax,yspacing)
+    x_vert = np.ones_like(y_vert)*((xmin+xmax)/2.)
+    xPx = np.append(xPx, x_vert)
+    yPx = np.append(yPx, y_vert)
+
+    return xPx, yPx
+
+def pixel_LSST(x0=0,y0=0,xf=1.0,yf=1.0):
+    
+    xPx = np.zeros(0)
+    yPx = np.zeros(0)
+    
+    x,y = pixel_L(xmin=200,ymin=200,xspacing=100, yspacing=200, width=800, height=2000 )
+    xPx = np.append(xPx, x)
+    yPx = np.append(yPx, y)
+    
+    x,y = pixel_S(x0=900)
+    xPx = np.append(xPx, x)
+    yPx = np.append(yPx, y)
+    
+    x,y = pixel_S(x0=1900)
+    xPx = np.append(xPx, x)
+    yPx = np.append(yPx, y)
+    
+    x,y = pixel_T(xmin=3000,ymin=200,xspacing=100, yspacing=200, width=950, height=2000)
+    xPx = np.append(xPx, x)
+    yPx = np.append(yPx, y)
+    
+    
+    xPx *= xf
+    yPx *= yf 
+    
+    xPx += x0
+    yPx += y0 
+    
+    
+    
+    return xPx, yPx 
+    
+
 def get_camera_sensors(instrument):
     instruments = ['lsstCam', 'comCam']
     if instrument in instruments:
