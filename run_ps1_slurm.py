@@ -278,7 +278,10 @@ parsed as #SBATCH -t {time_limit}:00:00 {default:300}",
         type=str,
         default="comHi",
         help="Prefix for the slurm job, parsed as \
-#SBATCH --job-name {job_name} (default: comHi)",
+#SBATCH --job-name {job_name} (default: comHi). Note: \
+there are only 8 digits displayed in squeue, so this \
+prefix should not be longer than 6 digits to allow for \
+numbering. Eg. lsHi is fine, but lsHiExIn is too long.",
     )
     parser.add_argument(
         "--slurm_file",
