@@ -113,7 +113,6 @@ def main(update_euler):
         # Update Euler angles for corner sensors only 
         if update_euler:
             corner_rotations = {'R04_SW0':180,
-                                #'R04_SW1':0,
                                 'R40_SW0':180,
                                 'R44_SW0':180,
                                 'R00_SW0':180
