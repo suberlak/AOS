@@ -93,7 +93,7 @@ def main(
             for bkgnd in backgrounds:
                 for pert in perts:
                     for position in positions:
-                        for select_group in range(group_number):
+                        for select_group in range(int(group_number)):
                             select_group += 1
                             print(f"\n{instrument} {field} {bkgnd} {pert} {position} {select_group}")
 
@@ -215,8 +215,7 @@ ntasks=24, phosim_p <= 24 (default: 24)",
     parser.add_argument(
         "--group_number",
         nargs=1,
-        type=int,
-        default=5,
+        default=[5],
         help="If split is True,  into how many groups split the sensors ? (default: 5, \
         splitting 205 lsstCam sensors into 5 groups of 41 sensors each).",
     )
@@ -316,7 +315,7 @@ write the slurm jobs and print the arguments parsed (default: False)",
         perts=args.perts,
         suffix=args.suffix,
         split = args.split,
-        group_number=args.group_number,
+        group_number=args.group_number[0],
         python_script=args.python_script,
         root_dir=args.root_dir,
         phosim_path=args.phosim_path,
