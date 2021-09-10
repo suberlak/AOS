@@ -6,7 +6,7 @@ import lsst.afw.cameraGeom as cameraGeom
 from lsst.obs.lsst import LsstCam
 import argparse
 
-def main(update_euler):
+def main(update_euler, use_obs_euler):
     '''
     A program to perform updates to the content of 
     focalplanelayout.txt and segmentation.txt
@@ -56,8 +56,12 @@ def main(update_euler):
         print('Updating Euler angle ')
         ticket_number = 'DM-30367' # both: obs_lsst orientation
     else:
-        print('Keeping  original Euler angle')
-        ticket_number = 'DM-28557' # lsstCam 
+        if use_obs_euler:
+            print('Using obs_lsst Euler angle')
+            ticket_number = 'DM-30367'
+        else:    
+            print('Keeping  original Euler angle')
+            ticket_number = 'DM-28557' # lsstCam 
 
     if reshuffle_sensors:
         print('Reshuffle sensors')
@@ -123,7 +127,9 @@ def main(update_euler):
                 newEulerAngle1 = eulerAngle1+rotation
                 print(f'For {newName} changed from {eulerAngle1} to {newEulerAngle1}')
                 newSplitContent[12] = str(newEulerAngle1)
-
+        if use_obs_euler:
+            yaw = -detector.getOrientation().getYaw().asDegrees() 
+            newSplitContent[12] = str(yaw)
 
         # update the dx, dy - since we know the actual position, set these to 0 ...
         dx,dy,dz = float(splitContent[15]), float(splitContent[16]), float(splitContent[17])
@@ -173,13 +179,20 @@ if __name__ == "__main__":
         "--update_euler",
         default=False,
         action="store_true",
-        help="Update the Euler angle for sensors in focalplanelayout.",
+        help="Update the Euler angle for sensors in focalplanelayout adding 180 deg to SW0 values.",
+    )
+    parser.add_argument(
+        "--use_obs_euler",
+        default=False,
+        action="store_true",
+        help="Update the Euler angle for sensors in focalplanelayout, using the obs_lsst values.",
     )
         
         
     args = parser.parse_args()
     main(
-        update_euler=args.update_euler
+        update_euler=args.update_euler,
+        use_obs_euler=args.use_obs_euler
     )
 
     
