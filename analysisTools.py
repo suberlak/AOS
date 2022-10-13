@@ -250,7 +250,12 @@ def plotZernikeImage(repoDir = '/repo/main/',
             
 
 def plotIterationSummary(data_dir, iterNum=5, num_ccds=9, suptitle='', figname='1.png',
-                         testLabel='', opdPssnFileName='PSSN.txt', opdOnly=False):
+                         opdPssnFileName='PSSN.txt', 
+                         plot_opd=True,
+                         plot_rms_opd_zk=True,
+                         plot_pssn=True, plot_fwhm=True,
+                         plot_raw_zk = False,
+                        ):
     '''Convenience function to make a 4-panel plot informing about the 
      convergence of AOS loop plotting :
      1) the OPD data in terms of Zernikes
@@ -265,7 +270,7 @@ def plotIterationSummary(data_dir, iterNum=5, num_ccds=9, suptitle='', figname='
     iterNum : float, a number of iterations (usually 5)
     num_ccds : float, a number of CCDs (field positions) for OPD evaluation. 
         For comcam it's usually 9 (one field point per CCD), for lsstcam/lsstfamcam 
-        it's 31 (field points scattered across the full array)
+        it's 31 (field points scattered across the full array), for corner sensors it's 4 
     suptitle : str, a suptitle to apply to the figure
     figname : str, a filename to save the plot as 
     testLabel: str, a label to identify tests; by default in AOS loop '1', so that 
@@ -277,26 +282,23 @@ def plotIterationSummary(data_dir, iterNum=5, num_ccds=9, suptitle='', figname='
     None
      
     '''
-    # two things to set 
-    #iterNum = 5 # numer of iterations 
-    #num_ccds = 9 # numer of CCDs at which OPD was evaluated 
+    # Read in the data 
     opdDataDic = {}
     wfsDataDic = {}
     pssn_data = []
     fwhm_data = []
     for iterCount in range(iterNum):
         # load the OPD data 
-        opdZkFilePath = os.path.join(data_dir,  'iter%d/img/opd.zer%s'%(iterCount,
-                                                                         testLabel))
+        opdZkFilePath = os.path.join(data_dir, f'iter{iterCount}/img/opd.zer')
         opdData = np.loadtxt(opdZkFilePath)
         opdDataDic[iterCount] = opdData
         
-        if not opdOnly:
-            # load the wavefront error data 
-            wfsZkFilePath = os.path.join(data_dir,  'iter%d/img/wfs.zer%s'%(iterCount,
-                                                                         testLabel))
-            wfsData = np.loadtxt(wfsZkFilePath)
-            wfsDataDic[iterCount] = wfsData
+        
+        # load the wavefront error data 
+        wfsZkFilePath = os.path.join(data_dir, f'iter{iterCount}/img/wfs.zer')
+        wfsData = np.loadtxt(wfsZkFilePath)
+        
+        wfsDataDic[iterCount] = wfsData
 
         # load the PSSN and FWHM data 
         pssn_filename = os.path.join(data_dir, 'iter%i' % iterCount, 
@@ -306,13 +308,18 @@ def plotIterationSummary(data_dir, iterNum=5, num_ccds=9, suptitle='', figname='
         fwhm_data.append(pssn_file_array[1])
     pssn_data = np.array(pssn_data)
     fwhm_data = np.array(fwhm_data)
+    
+    
+    # define the plotting space
 
-    if not opdOnly:
-        fig,axs = plt.subplots(2,2,figsize=(16,12)
-                            )
-    else:
-        fig,axs = plt.subplots(1,3,figsize=(20,5)
-                            )
+    # figure out how many panels are needed
+    n_panels  = np.sum([plot_opd, plot_rms_opd_zk, plot_pssn, plot_fwhm, plot_raw_zk])
+    n_cols = 2
+    n_rows = n_panels // n_cols # no remainder division
+    if n_rows*n_cols < n_panels:
+        n_rows += 1 
+     
+    fig,axs = plt.subplots(n_rows,n_cols,figsize=(8*n_cols,5*n_rows))
     ax = np.ravel(axs)
 
     # 0: plot the OPD 
@@ -320,18 +327,19 @@ def plotIterationSummary(data_dir, iterNum=5, num_ccds=9, suptitle='', figname='
     # to compare the two, need  to somehow "average" the OPD ? 
     # plot the values of zernikes at different field points...
     k = 0 
-    for iterCount in range(iterNum):
-        opdData = opdDataDic[iterCount]
-    #     for i in range(np.shape(opdData)[0]):
-    #         ax.plot(opdData[i,:], lw=1,ls='--')
-        # plot the average of these ... 
-        ax[k].plot(np.mean(opdData, axis=0), lw=3,ls='-' ,)
+    if plot_opd:
+        for iterCount in range(iterNum):
+            opdData = opdDataDic[iterCount]
+        #     for i in range(np.shape(opdData)[0]):
+        #         ax.plot(opdData[i,:], lw=1,ls='--')
+            # plot the average of these ... 
+            ax[k].plot(1000*np.mean(opdData, axis=0), lw=3,ls='-' ,)
 
-    ax[k].set_xlabel('Zernike #')
-    ax[k].set_ylabel('wavefront error of OPD '+r'$[\mu m]$')
-
-    if not opdOnly:
+        ax[k].set_xlabel('Zernike #')
+        ax[k].set_ylabel('wavefront error (OPD) '+r'$[nm]$')
         k += 1 
+                       
+    if plot_rms_opd_zk:
         # 1: plot Zernike wavefront errors  vs OPD 
         for iterCount in range(iterNum):
             wfsData = wfsDataDic[iterCount]
@@ -344,41 +352,60 @@ def plotIterationSummary(data_dir, iterNum=5, num_ccds=9, suptitle='', figname='
 
             zernikeRms = np.sqrt(np.mean(np.square(zernikeErrors), axis=1))
 
-            ax[k].plot(np.arange(19)+4, zernikeRms, 
+            ax[k].plot(np.arange(19)+4, 1000*zernikeRms, 
                           '-o', lw=3, label='iter%d'%iterCount)
 
         ax[k].set_xlabel('Zernike Number', size=18)
-        ax[k].set_ylabel('RMS WFS vs OPD (microns)', size=18)
+        ax[k].set_ylabel('RMS(WFS-OPD) [nm]', size=18)
 
         ax[k].legend(fontsize=16)
-        ax[k].set_title('Zernike Errors WFS ', size=18)
+        ax[k].set_title('Zernike Errors ', size=18)
+        k += 1 
+                       
+    # plot the raw Zk estimate
+    if plot_raw_zk:
+        for iterCount in range(iterNum):
+            wfsData = wfsDataDic[iterCount]
+            #opdData = opdDataDic[iterCount]
+            # do the difference with mean OPD ... 
+            #meanOpdData = np.mean(opdData, axis=0)
+            #zernikeErrorsDiff = np.sqrt((wfsData - meanOpdData)**2.)
+            #zernikeErrors = np.transpose(zernikeErrorsDiff, axes=(1,0))
+            #zernikeRms = np.sqrt(np.mean(np.square(zernikeErrors), axis=1))
+            meanZernikes = np.mean(wfsData, axis=0)
+            ax[k].plot(np.arange(19)+4, 1000*meanZernikes, 
+                          '-o', lw=3, label='iter%d'%iterCount)
 
+        ax[k].set_xlabel('Zernike Number', size=18)
+        ax[k].set_ylabel('Raw zernike estimate[nm]', size=18)
+
+        ax[k].legend(fontsize=16)
+        ax[k].set_title('Zernikes ', size=18)
+        k+=1 
+                       
     # 2: plot PSSN 
-    k += 1 
-    for i in range(num_ccds):
-        ax[k].plot(np.arange(iterNum), pssn_data[:,i], c='b', marker='x')
-    ax[k].plot(np.arange(iterNum), pssn_data[:,num_ccds], lw=4, marker='+',
-             ms=20, markeredgewidth=5, c='r', label='GQ PSSN')
-    ax[k].legend()
-    ax[k].set_xlabel('Iteration')
-    ax[k].set_ylabel('PSSN')
-    ax[k].set_title('PSSN')
-    # plt.xticks(size=14)
-    # plt.yticks(size=14)
-
+    if plot_pssn:
+        for i in range(num_ccds):
+            ax[k].plot(np.arange(iterNum), pssn_data[:,i], c='b', marker='x')
+        ax[k].plot(np.arange(iterNum), pssn_data[:,num_ccds], lw=4, marker='+',
+                 ms=20, markeredgewidth=5, c='r', label='GQ PSSN')
+        ax[k].legend()
+        ax[k].set_xlabel('Iteration')
+        ax[k].set_ylabel('PSSN')
+        ax[k].set_title('PSSN')
+        k+=1
 
     # 3: plot the FWHM 
-    k +=1 
-    for i in range(num_ccds):
-        ax[k].plot(np.arange(iterNum), fwhm_data[:,i], c='b', marker='x')
-    ax[k].plot(np.arange(iterNum), fwhm_data[:,num_ccds], lw=4, marker='+',
-             ms=20, markeredgewidth=5, c='r', label='GQ FWHM_eff')
-    ax[k].legend()
-    ax[k].set_xlabel('Iteration')
-    ax[k].set_ylabel('FWHM_eff (arcseconds)')
-    ax[k].set_title('FWHM_eff')
-    # plt.xticks(size=14)
-    # plt.yticks(size=14)
+    if plot_fwhm:
+        for i in range(num_ccds):
+            ax[k].plot(np.arange(iterNum), fwhm_data[:,i], c='b', marker='x')
+        ax[k].plot(np.arange(iterNum), fwhm_data[:,num_ccds], lw=4, marker='+',
+                 ms=20, markeredgewidth=5, c='r', label='GQ FWHM_eff')
+        ax[k].legend()
+        ax[k].set_xlabel('Iteration')
+        ax[k].set_ylabel('FWHM_eff (arcseconds)')
+        ax[k].set_title('FWHM_eff')
+        k+=1
 
     # on all : turn on the grid and set the x-label to be on integers only
     # since we're plotting Zernikes and iteration, both of which are integers
