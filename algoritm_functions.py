@@ -109,7 +109,7 @@ def imageCoCenter_store(I, inst, fov=3.5, debugLevel=0,
 
     # Calculate the center position on image
     # 0.5 is the half of 1 pixel
-    dimOfDonut = inst.getDimOfDonutOnSensor()
+    dimOfDonut = inst.dimOfDonutImg
     stampCenterx1 = dimOfDonut / 2 + 0.5
     stampCentery1 = dimOfDonut / 2 + 0.5
     store['cocenter_centerx1_original'] = stampCenterx1
@@ -117,8 +117,8 @@ def imageCoCenter_store(I, inst, fov=3.5, debugLevel=0,
 
     # Shift in the radial direction
     # The field of view (FOV) of LSST camera is 3.5 degree
-    offset = inst.getDefocalDisOffset()
-    pixelSize = inst.getCamPixelSize()
+    offset = inst.defocalDisOffset
+    pixelSize = inst.pixelSize
     radialShift = increaseFactor*fov * (offset / 1e-3) * (10e-6 / pixelSize)
     store['cocenter_fov'] = fov
     store['cocenter_offset'] = offset
@@ -786,3 +786,103 @@ def get_butler_image(repoDir,instrument='LSSTComCam', iterN=0, detector="R22_S01
     postIsr = butler.get('postISRCCD',dataId=dataId,
                           collections=[collection])
     return postIsr
+
+def get_comp_image(boundaryT=1,
+                   optical_model="offAxis",
+                   maskScalingFactorLocal =1,
+                   field_xy = (1.1,1.2),
+                   donut_stamp_size = 160,
+                   inst_name='comcam') :
+    ''' Get compensable image for field location 
+    
+    Parameters:
+    -----------
+    boundaryT : int
+        Extended boundary in pixel. It defines how far the computation mask
+        extends beyond the pupil mask. And, in fft, it is also the width of
+        Neuman boundary where the derivative of the wavefront is set to
+        zero.
+    optical_model : str
+        Optical model. It can be "paraxial", "onAxis", or "offAxis".
+    maskScalingFactorLocal : float
+        Mask scaling factor (for fast beam) for local correction.
+        
+    field_xy : tuple or list
+            Position of donut on the focal plane in degree (field x, field y).
+
+    '''
+    # make fake donut array so no data is needed
+    x = np.linspace(-2,2,donut_stamp_size)
+    y = np.linspace(-2,2,donut_stamp_size)
+    xx, yy = np.meshgrid(x,y)
+    z = np.exp(np.cos(5*xx)-np.sin(5*yy))
+     
+    # initialize compensable image 
+    imgExtra = CompensableImage() 
+
+    # this is like setup in WfEstimator()
+    config_dir = getConfigDir()
+    inst_dir = os.path.join(config_dir, "cwfs", "instData")
+    instrument = Instrument()
+
+    camType = getCamType(inst_name)
+    defocalDisInMm = getDefocalDisInMm(inst_name)
+    instrument.configFromFile(donut_stamp_size, camType)
+    field_distance = np.sqrt(field_xy[0]**2.+field_xy[1]**2.)
+    #print(field_distance)
+    # this is similar to _makeCompensableImage() in donutStamp.py, 
+    imgExtra.setImg(
+                field_xy,
+                DefocalType.Extra,
+                image=z
+            )
+    imgExtra.makeMask(instrument, optical_model, boundaryT, maskScalingFactorLocal)
+    
+    return imgExtra
+
+def plot_imageCoCenter(algo, store, 
+                      I1,I2,
+                      I1imgInit,I2imgInit,
+                      I1shifts, I2shifts):
+    ''' Plot the action performed by imageCoCenter'''
+
+    fig,ax = plt.subplots(2,3,figsize=(12,6))
+
+    dimOfDonut = algo._inst.dimOfDonutImg
+    stampCenter = dimOfDonut / 2 + 0.5
+
+    for row,I,imgInit, shift in zip([0,1],
+                             [I1,I2],
+                             [I1imgInit,I2imgInit],
+                             [I1shifts, I2shifts]
+                            ):
+        ax[row,0].imshow(imgInit, origin='lower')
+        ax[row,1].imshow(I.getImg(), origin='lower')
+        ax[row,2].imshow(imgInit-I.getImg(), origin='lower')
+
+        ax[row,2].plot([[stampCenter,stampCenter],[stampCenter+shift[0], stampCenter]],)
+
+        # illustrate the shift with arrows
+        x0 = stampCenter
+        y0 = stampCenter
+        dx = 10*shift[0]
+        dy = 10*shift[1]
+        # x-shift
+        ax[row,2].quiver(x0,    y0, dx, 0,  scale=1, units="xy", scale_units="xy",
+                         width=2.5, edgecolors='orange', color='red')
+        # y-shift
+        ax[row,2].quiver(x0+dx, y0,  0 ,dy, scale=1, units="xy", scale_units="xy",
+                         width=2.5,  edgecolors='orange', color='red')
+        ax[row,2].text(1.1, 0.45, f'dx,dy: {shift} [px]',
+                       transform=ax[row,2].transAxes,
+                       fontsize=19,)
+
+    row=0
+    ax[row,0].set_title('Initial')
+    ax[row,1].set_title('Shifted')
+    ax[row,2].set_title('Initial-shifted')
+
+    ax[0,0].text(-0.6,0.45, 'I1', fontsize=19,transform=ax[0,0].transAxes)
+    ax[1,0].text(-0.6,0.45, 'I2', fontsize=19,transform=ax[1,0].transAxes)
+    
+    
