@@ -112,7 +112,7 @@ def imageCoCenter_store(I, inst, fov=3.5, debugLevel=0,
 
     # Shift in the radial direction
     # The field of view (FOV) of LSST camera is 3.5 degree
-    offset = inst.defocalDisOffset
+    offset = inst.defocalDisOffsetInM
     pixelSize = inst.pixelSize
     radialShift = increaseFactor*fov * (offset / 1e-3) * (10e-6 / pixelSize)
     store['cocenter_fov'] = fov
@@ -508,7 +508,7 @@ def _solvePoissonEq_store(algo, I1, I2, iOutItr=0, store=None):
 
         # Calculate dz
         focalLength = algo._inst.focalLength
-        offset = algo._inst.defocalDisOffset
+        offset = algo._inst.defocalDisOffsetInM
         dz = 2 * focalLength * (focalLength - offset) / offset
 
         # Define zc
