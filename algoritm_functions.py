@@ -1,8 +1,3 @@
-# functions allowing to store various portions of the algorithm,
-# as well as turn on / off the image cocenter stage ...
-
-
-# mostly taken from the AOS_DM-35922_cocenter_vs_recenter.ipynb notebook
 
 from scipy.ndimage import generate_binary_structure, iterate_structure
 from scipy.ndimage import binary_dilation, binary_erosion
@@ -701,6 +696,9 @@ def _singleItr_store(algo, I1, I2, model, tol=1e-3, store=None,
                 yoSensor,
                 algo.getObsOfZernikes(),
             )
+            
+            store[jj]['both']['wcomp'] = algo.wcomp
+            store[jj]['both']['West'] = algo.West
 
     else:
         # Once we run into caustic, stop here, results may be close to real
@@ -740,8 +738,7 @@ def _singleItr_store(algo, I1, I2, model, tol=1e-3, store=None,
     
 def get_butler_stamps(repoDir,instrument='LSSTComCam', iterN=0, detector="R22_S01",
                      dataset_type = 'donutStampsExtra', collection=''):
-    #repoDir = '/project/scichris/aos/rotation_DM-31532/Ns_rotCam_0_c/phosimData/' 
-
+    
     butler = dafButler.Butler(repoDir)
     registry = butler.registry
     if collection == '':
@@ -885,4 +882,39 @@ def plot_imageCoCenter(algo, store,
     ax[0,0].text(-0.6,0.45, 'I1', fontsize=19,transform=ax[0,0].transAxes)
     ax[1,0].text(-0.6,0.45, 'I2', fontsize=19,transform=ax[1,0].transAxes)
     
-    
+def plot_algo_steps(store,iterNum=0):
+
+    titles = {}
+    if iterNum == 0 : 
+        titles['imgBeforeCocenter']='before coCenter'
+        titles['imgAfterCocenter']='after coCenter'
+        
+    # for all other iterations including zeroth one 
+    titles['imgBeforeCompensate']='before compensation'
+    titles['show_lutxyp']='projection of image \ncoordinates onto pupil \n(show_lutxyp)'
+    titles['show_lutxyp_extracted']='cleaned-up projection'
+    titles['imgAfterRecenter']='recentered image'
+    titles['lutIp']='interpolated image \n(lutIp)'
+    titles['Jacobian']='Jacobian'
+    titles['imgAfterCompensate']='after compensation'
+    titles['applyI1I2mask_pupil']='apply common pupil mask'
+
+
+    rows=len(titles.keys())
+    fig,ax = plt.subplots(rows,2, figsize=(6,3*rows))
+    ax[0,0].text(0.8,1.2,f'iteration {iterNum}',
+                transform=ax[0,0].transAxes,
+                fontsize=19)
+    for defocal,col in zip(['intra', 'extra'],
+                           [0,1]):
+        print(defocal,col)
+        row=0
+        for key in titles.keys():
+            ax[row,col].imshow(store[iterNum][defocal][key], origin='lower')
+            row+=1 
+    row=0
+    for key in titles.keys():
+        ax[row,1].text(1.05,0.5, titles[key], fontsize=19,transform=ax[row,1].transAxes)
+        row += 1 
+    ax[0,0].set_title('intra (I1)')
+    ax[0,1].set_title('extra (I2)')
