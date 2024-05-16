@@ -67,6 +67,43 @@ rcParams['font.size'] = 15
 rcParams['axes.titlesize'] = 18
 
 
+def plot_stamps(donutStamps, title='intra-focal',ncols=None,
+               N=10, panel_width = 4, indices=None):
+    #N = len(donutStamps)
+    if indices is None:
+        # take first N donuts
+        indices = np.arange(N)
+        
+    else:  # infer the number of donuts to plot from the number of indices provided 
+        N = len(indices)
+
+    if ncols is None:
+        nrows=1
+        ncols=(N // nrows)
+    else:
+        nrows=(N//ncols)
+        
+    if N % nrows>0:
+        ncols+=1
+    fig,axs = plt.subplots(nrows,ncols, figsize=(ncols*panel_width,
+                                                 nrows*panel_width))
+    ax = np.ravel(axs)
+    i = 0 
+    zscale = ZScaleInterval()
+    for j in indices:
+        stamp = donutStamps[j]
+        data =  stamp.stamp_im.getImage().getArray()
+        vmin, vmax = zscale.get_limits(data)
+        ax[i].imshow(data, vmin=vmin,vmax=vmax, origin='lower')
+        ax[i].text(70,80, f'{i}', fontsize=17, c='white')
+        ax[i].get_xaxis().set_visible(False)
+        ax[i].get_yaxis().set_visible(False)
+        i += 1 
+    M = nrows*ncols
+    for i in range(N,M):
+        ax[i].axis('off')
+    fig.text(0.46, 0.89, title, fontsize=19)
+
 
 def imageCoCenter_store(I, inst, fov=3.5, debugLevel=0,
                        store=None,increaseFactor=1.0):
