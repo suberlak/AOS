@@ -31,32 +31,35 @@ import pandas as pd
 
 def plot_butler_with_wcs(repo_dir, detector='R22_S10', 
                          inst_file ='/project/scichris/aos/images/lsstCam/lsstCam_entire_tiled_LSST.inst',
-                        xmax=4000, ymax=4000, coords='CCS'):
+                        xmax=4000, ymax=4000, coords='CCS',
+                        collections=['run1'],
+                        xsize=12, ysize=12):
     zscale = ZScaleInterval()
 
     instrument = 'LSSTCam'
     #repo_dir = '/project/scichris/aos/images/lsstCam/letter_lsstCam_entire_tiled_LSST_all_rot/DATA/'
-    butler = dafButler.Butler(repo_dir, collections=[f'{instrument}/raw/all',
-                                                     f'{instrument}/calib','run1',
-                                                     f'{instrument}/calib/unbounded'],
-                                 )
-
+    butler = dafButler.Butler(repo_dir)#,collections=collections)# collections=[f'{instrument}/raw/all',
+                                       #              f'{instrument}/calib','run1',
+                                       #              f'{instrument}/calib/unbounded'],
+                                 #)
     dataId0 = dict(instrument=instrument)
     dataset = next(iter(butler.registry.queryDatasets(
-                        datasetType='raw',
-                        dataId=dataId0  )))
-
+                            datasetType='postISRCCD',
+                            dataId=dataId0,
+                            collections=collections )
+                       ))
     expN = dataset.dataId["exposure"]
+    dataId = {'detector':detector, 'instrument':instrument,
+          'exposure':expN}
 
-    exposure = butler.get('postISRCCD', detector=detector, 
-                          instrument=instrument,exposure=expN,
-              collections=['run1'])
+    exposure = butler.get('postISRCCD', dataId=dataId,
+              collections=collections)
     detector  = exposure.getDetector()
     data = exposure.image.array
 
     vmin, vmax = zscale.get_limits(data)
 
-    fig = plt.figure(figsize=(12, 12))
+    fig = plt.figure(figsize=(xsize, ysize))
 
     # plot in DVCS 
     if coords == 'CCS':
@@ -73,16 +76,16 @@ def plot_butler_with_wcs(repo_dir, detector='R22_S10',
 
     # read in the input instance catalog 
     # that is the reference catalog 
-    cat = np.genfromtxt(inst_file,
-                            skip_header=16)
+    #cat = np.genfromtxt(inst_file,
+    #                        skip_header=16)
 
-    cat_df = pd.DataFrame(cat[:, 1:5], columns=['id', 'ra', 'dec', 'g'])
-
+    #cat_df = pd.DataFrame(cat[:, 1:5], columns=['id', 'ra', 'dec', 'g'])
+    cat = Table.read(inst_file, format='ascii')
     # get the wcs 
     wcs = exposure.getWcs()
 
     # calculate the position given the x,y 
-    x,y= wcs.skyToPixelArray(cat_df['ra'], cat_df['dec'],degrees=True)
+    x,y= wcs.skyToPixelArray(cat['ra'], cat['dec'],degrees=True)
     
     if coords == 'CCS':
         x,y=y,x
@@ -650,7 +653,8 @@ def plot_cameraGeom(repo_dir = os.path.join('/project/scichris/aos/images/lsstCa
                       
                        ] ,
                     instrument = 'LSSTCam',
-                    binSize=16
+                    binSize=16,
+                    collections = ['run1']
                    ):
     afwDisplay.setDefaultBackend("matplotlib")
 
@@ -658,23 +662,24 @@ def plot_cameraGeom(repo_dir = os.path.join('/project/scichris/aos/images/lsstCa
 
     # need to specify the calib collections to be able to access the camera 
     
-    butler = dafButler.Butler(repo_dir, collections=[f'{instrument}/raw/all',
-                                                     f'{instrument}/calib','run1',
-                                                     f'{instrument}/calib/unbounded']
-                             )
+    butler = dafButler.Butler(repo_dir)# collections=[f'{instrument}/raw/all',
+                                        ##             f'{instrument}/calib','run1',
+                                         #            f'{instrument}/calib/unbounded']
+                             #)
 
     dataId0 = dict(instrument=instrument)
     dataset = next(iter(
                         butler.registry.queryDatasets(
                             datasetType='postISRCCD', 
-                            collections=['run1'],
+                            collections=collections,
                             dataId=dataId0  )
                         )
                    )
 
     exposure = dataset.dataId["exposure"]
 
-    camera  = butler.get("camera", instrument=instrument, exposure=exposure)
+    camera  = butler.get("camera", instrument=instrument, exposure=exposure,
+                        collections = f'{instrument}/calib/unbounded')
 
     fig = plt.figure(figsize=(15,15))
     fig.subplots_adjust(hspace=0., wspace=0.0, )
@@ -682,8 +687,8 @@ def plot_cameraGeom(repo_dir = os.path.join('/project/scichris/aos/images/lsstCa
     ax = fig.add_subplot(1, 1, 1)
 
     disp = afwDisplay.Display(fig)
-    disp.scale('asinh', 'zscale', Q=2)
-    #disp.scale('linear', 'minmax')
+    #disp.scale('asinh', 'zscale', Q=2)
+    disp.scale('linear', 'minmax')
     #disp.scale('asinh', 5, 7000, Q=2)
 
     disp.setImageColormap('viridis' if True else 'gray')
