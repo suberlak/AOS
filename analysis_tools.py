@@ -38,12 +38,12 @@ from pathlib import Path
 import numpy as np # standard package for doing calculations
 import matplotlib.pyplot as plt # standard package for plotting
 
-import batoid
+#import batoid
 import galsim
 
 import sys
 sys.path.append('/sdf/data/rubin/gpfs/ncsa-home/home/scichris/aos/wfsim/')
-import wfsim
+#import wfsim
 
 from lsst.ts.wep.utility import (
     getConfigDir,
@@ -67,18 +67,8 @@ from lsst.cwfs.image import Image
 from lsst.cwfs.instrument import Instrument as InstrumentCwfs
 from pathlib import Path
 
-
-
-
 import numpy as np # standard package for doing calculations
 import matplotlib.pyplot as plt # standard package for plotting
-
-import batoid
-import galsim
-
-import sys
-sys.path.append('/sdf/data/rubin/gpfs/ncsa-home/home/scichris/aos/wfsim/')
-import wfsim
 
 
 from lsst.obs.lsst import LsstCam
@@ -90,7 +80,6 @@ from lsst.obs.lsst import Latiss
 import lsst
 
 import galsim
-import numpy as np
 
 
 
@@ -1402,14 +1391,14 @@ def plotIterationSummary(data_dir, iterNum=5, num_ccds=9, suptitle='', figname='
             if plot_in_asec:
                 #opd_fwhm = (1000*opdData/750.)*rms_coeff
                 opd_fwhm = convertZernikesToPsfWidth(opdData)
-                ax[k].plot(np.mean(opd_fwhm, axis=0), lw=3,ls='-' ,)
+                ax[k].plot(np.arange(19)+4, np.mean(opd_fwhm, axis=0), lw=3,ls='-' ,)
             else:
-                ax[k].plot(1000*np.mean(opdData, axis=0), lw=3,ls='-' ,)
+                ax[k].plot(np.arange(19)+4, 1000*np.mean(opdData, axis=0), lw=3,ls='-' ,)
                 
         ax[k].set_xlabel('Zernike Numer')
 
         if plot_in_asec: 
-            ax[k].set_ylabel('OPD FWHM [asec]')
+            ax[k].set_ylabel('OPD PSF FWHM \ncontribution [asec]')
         else:
             ax[k].set_ylabel('Wavefront Error (OPD) [nm]')
         k += 1 
